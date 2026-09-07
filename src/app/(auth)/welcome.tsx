@@ -10,7 +10,7 @@ export default function Welcome() {
       <View style={styles.hero}>
         {/* Icon circle: primaryLight bg, primary border, comes from the figma template */}
         <View style={styles.iconCircle}>
-          <Text style={styles.heartIcon}>♥</Text>
+          <Text style={styles.heartIcon}>logo</Text>
         </View>
         <Text style={styles.title}>Banco de Alimentos</Text>
         <Text style={styles.subtitle}>Plataforma de Voluntarios</Text>
@@ -96,5 +96,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  
+
 });

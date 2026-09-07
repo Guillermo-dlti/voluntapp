@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BackButton } from '@/components/back-button';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 
 export default function Login() {
@@ -17,6 +18,8 @@ export default function Login() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <BackButton />
+
       <Text style={styles.title}>Iniciar Sesión</Text>
 
       <View style={styles.form}>

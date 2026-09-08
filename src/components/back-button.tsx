@@ -1,22 +1,31 @@
-import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { type Href, router } from 'expo-router';
+import { type StyleProp, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 
 import { AppFonts, Brand } from '@/constants/theme';
 
+interface BackButtonProps {
+  fallback?: Href;
+  inline?: boolean;
+  style?: StyleProp<ViewStyle>;
+  onPress?: () => void;
+}
 
-export function BackButton() {
+export function BackButton({ fallback = '/(auth)/welcome', inline = false, style, onPress }: BackButtonProps) {
   function handlePress() {
-
+    if (onPress) {
+      onPress();
+      return;
+    }
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(auth)/welcome');
+      router.replace(fallback);
     }
   }
 
   return (
     <Pressable
-      style={styles.button}
+      style={[inline ? styles.inlineButton : styles.button, style]}
       onPress={handlePress}
       hitSlop={12}
       accessibilityRole="button"
@@ -35,6 +44,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    zIndex: 10,
+  },
+  inlineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
   },
   icon: {
     fontFamily: AppFonts.body,

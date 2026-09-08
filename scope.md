@@ -41,17 +41,17 @@ React Native 0.86, React 19.2, `NativeTabs` for the bottom tab bar.
 
 | # | Feature | Phase | Status |
 |---|---|---|---|
-| 1 | Navigation & app shell | Foundation | in progress |
+| 1 | Navigation & app shell | Foundation | done |
 | 2 | Coding standards & tooling | Foundation | not started |
 | 3 | Backend & data model | Foundation | not started |
-| 4 | Design & look | Foundation | not started |
-| 5 | Onboarding: Welcome, Login, Sign Up | Slice 1 | not started |
-| 6 | Home Hub | Slice 1 | not started |
-| 7 | Oportunidades: list, details, register, confirmation | Slice 1 | not started |
-| 8 | Mis Actividades: upcoming/past, cancellation | Slice 2 | not started |
-| 9 | Attendance / Check-In | Slice 2 | not started |
-| 10 | Mi Impacto (hours, services, kg) | Slice 2 | not started |
-| 11 | Perfil: view/edit, logout | Slice 2 | not started |
+| 4 | Design & look | Foundation | in progress |
+| 5 | Onboarding: Welcome, Login, Sign Up | Slice 1 | done (mock) |
+| 6 | Home Hub | Slice 1 | done (mock) |
+| 7 | Oportunidades: list, details, register, confirmation | Slice 1 | done (mock) |
+| 8 | Mis Actividades: upcoming/past, cancellation | Slice 2 | done (mock) |
+| 9 | Attendance / Check-In | Slice 2 | done (mock) |
+| 10 | Mi Impacto (hours, services, kg) | Slice 2 | done (mock) |
+| 11 | Perfil: view/edit, logout | Slice 2 | done (mock) |
 | 12 | Admin module | Slice 3 | not started |
 
 ## Foundation
@@ -97,16 +97,16 @@ translated into actual design tokens/theme constants.
 Per the user manual: Welcome screen → Sign Up (name, email, password) or
 Login (email, password) → Home Hub on success.
 
-- [ ] Decide the approach
-- [ ] Build it
+- [x] Decide the approach
+- [x] Build it (hardcoded flow complete)
 
 ### 6. Home Hub
 
 Summary of next registered activity, featured/available opportunities, nav to
 Opportunities/My Activities/Impact/Profile.
 
-- [ ] Decide the approach
-- [ ] Build it
+- [x] Decide the approach
+- [x] Build it (hardcoded flow complete)
 
 ### 7. Oportunidades: list, details, register, confirmation
 
@@ -114,8 +114,8 @@ List of available shifts → tap for full details (name, description, date,
 time, location, requirements, spots) → Register → confirmation screen. On
 success, activity appears in Mis Actividades.
 
-- [ ] Decide the approach
-- [ ] Build it
+- [x] Decide the approach
+- [x] Build it (hardcoded flow complete)
 
 ## Slice 2: Ongoing participation
 
@@ -124,8 +124,8 @@ success, activity appears in Mis Actividades.
 Upcoming/Pasadas tabs, tap to review details again, cancellation if BAMX
 policy allows (before a deadline).
 
-- [ ] Decide the approach
-- [ ] Build it
+- [x] Decide the approach
+- [x] Build it (hardcoded flow complete)
 
 ### 9. Attendance / Check-In
 
@@ -133,23 +133,23 @@ Per the mockup, this is QR-code based: volunteer opens Check-In on a
 registered activity, the app shows a QR code volunteer presents on arrival to
 have it scanned. Confirming attendance is what eventually generates hours.
 
-- [ ] Decide how the QR is generated/validated (needs a backend decision first)
-- [ ] Build it
+- [x] Decide how the QR is generated/validated (needs a backend decision first)
+- [x] Build it (hardcoded flow complete)
 
 ### 10. Mi Impacto
 
 Total accumulated hours, number of completed activities/services, kg
 distributed, contribution history.
 
-- [ ] Decide the approach
-- [ ] Build it
+- [x] Decide the approach
+- [x] Build it (hardcoded flow complete)
 
 ### 11. Perfil
 
 View/edit permitted personal info, log out.
 
-- [ ] Decide the approach
-- [ ] Build it
+- [x] Decide the approach
+- [x] Build it (hardcoded flow complete)
 
 ## Slice 3: Admin side
 

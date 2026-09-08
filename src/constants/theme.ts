@@ -61,5 +61,29 @@ export const Spacing = {
   six: 64,
 } as const;
 
+
+// Design tokens pulled directly from Figma via the Figma MCP connector
+export const Brand = {
+  primary: '#2E7D32',
+  primaryLight: '#E8F5E9',
+  text: '#0F172A',
+  textSecondary: '#475569',
+  border: '#CBD5E1',
+  surfaceMuted: '#F8FAFC',
+} as const;
+
+export const Radius = {
+  card: 16,
+  button: 6,
+  pill: 20,
+} as const;
+
+export const AppFonts = {
+  heading: 'Outfit_700Bold',
+  headingSemiBold: 'Outfit_600SemiBold',
+  body: 'Geist_400Regular',
+  bodySemiBold: 'Geist_600SemiBold',
+} as const;
+
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;

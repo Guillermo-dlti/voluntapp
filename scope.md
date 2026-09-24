@@ -13,9 +13,11 @@ thicken it piece by piece.
 Expo SDK 57, Expo Router (file-based, `src/app` as root), TypeScript (strict),
 React Native 0.86, React 19.2, `NativeTabs` for the bottom tab bar.
 
+Backend: Node.js + TypeScript API in `server/`, MongoDB Atlas (`voluntapp`).
+Registration uses email/password; passwords are stored as Argon2id hashes.
+
 **Not yet decided** (real open questions carried over from Stage 1):
-- Backend / database (Supabase, Firebase, custom API?)
-- Auth method
+- Login/session method
 - Notification/reminder system
 - Whether volunteers self-enter hours or only BAMX validates them
 
@@ -37,15 +39,26 @@ React Native 0.86, React 19.2, `NativeTabs` for the bottom tab bar.
 | Attendance | id, registration, status, check-in time | belongs to a Registration |
 | Hours | id, volunteer, activity, amount, validation status | generated from validated Attendance |
 
+The first persisted entity is `users`. A Volunteer is a user with role
+`volunteer`; administrators share this collection. Fields: `_id` (ObjectId),
+`name`, `username`, `email`, `passwordHash`, `role`, optional `phone`, `status`,
+`createdAt`, `updatedAt` (BSON dates). Email and username are trimmed,
+lowercased, and each has a unique index. Roles: `volunteer`, `bamx_admin`,
+`technical_admin`. Status: `active` or `inactive`. Public registration always
+sets `volunteer` and `active`; clients cannot supply role/status/hash/dates.
+Passwords are 15–128 characters; usernames are 3–30 ASCII letters, digits,
+underscores or periods. Phone, when provided, is an international number
+starting with `+` and containing 8–15 digits. No user-list endpoint is public.
+
 ## At a glance
 
 | # | Feature | Phase | Status |
 |---|---|---|---|
 | 1 | Navigation & app shell | Foundation | done |
 | 2 | Coding standards & tooling | Foundation | not started |
-| 3 | Backend & data model | Foundation | not started |
+| 3 | Backend & data model | Foundation | in progress (users API) |
 | 4 | Design & look | Foundation | in progress |
-| 5 | Onboarding: Welcome, Login, Sign Up | Slice 1 | done (mock) |
+| 5 | Onboarding: Welcome, Login, Sign Up | Slice 1 | registration connected; login mock |
 | 6 | Home Hub | Slice 1 | done (mock) |
 | 7 | Oportunidades: list, details, register, confirmation | Slice 1 | done (mock) |
 | 8 | Mis Actividades: upcoming/past, cancellation | Slice 2 | done (mock) |
@@ -77,10 +90,42 @@ Figma prototype, plus an auth stack (Welcome → Login/Sign Up) in front of it.
 
 ### 3. Backend & data model
 
-- [ ] Decide the backend (Supabase / Firebase / custom API)
+- [x] Decide the backend (Node.js/TypeScript API + MongoDB Atlas)
 - [ ] Decide the auth method
 - [ ] Implement the Volunteer/Activity/Registration/Attendance/Hours schema
 - [ ] Decide whether volunteers self-report hours or only admins validate
+
+Users registration API (implemented).
+
+- [x] Create isolated server package and environment configuration
+- [x] Implement users model and unique email/username indexes
+- [x] Implement validated registration with Argon2id and fixed volunteer role
+- [x] Document startup and manual API verification
+- [x] Verify TypeScript and manual HTTP requests
+- [x] Verify registration persistence against Atlas
+Mobile registration build:
+
+- [x] Add API client with timeout and safe error messages
+- [x] Add username, field validation, loading and success states to registration
+- [x] Configure public API URL and document emulator startup
+- [x] Verify types and registration through the client against Atlas
+- [ ] Walk the real registration flow in a simulator (no simulator devices/runtimes installed here)
+
+Mobile verification: Expo and server typechecks pass; iOS export succeeds.
+The actual client function was exercised against the API and Atlas: successful
+registration/persistence, duplicate handling, validation and offline messaging
+pass. The temporary account was removed. UI keyboard/layout verification is
+pending on an installed simulator.
+
+Verification: server build/typecheck and Expo typecheck pass. Manual HTTP
+checks with a substituted in-memory collection cover successful registration,
+normalization, hash verification/salting, response privacy, duplicate-error
+handling, invalid input, forbidden role/status, malformed/oversized JSON,
+missing routes and rate limiting. Real Atlas verification also passes: HTTP 201 registration, persisted volunteer
+role/status, Argon2id verification, and HTTP 409 for duplicate normalized email
+and username. The temporary verification account was removed afterward.
+`expo lint` could not complete because ESLint was not configured; its automatic
+dependency/config changes were reverted. No test runner was added.
 
 ### 4. Design & look
 
@@ -94,8 +139,9 @@ translated into actual design tokens/theme constants.
 
 ### 5. Onboarding: Welcome, Login, Sign Up
 
-Per the user manual: Welcome screen → Sign Up (name, email, password) or
-Login (email, password) → Home Hub on success.
+Registration now submits name, username, email and password to the API and
+shows an account-created confirmation. It does not grant a session or open
+the tabs. Login remains mocked; real login/session handling is a later build.
 
 - [x] Decide the approach
 - [x] Build it (hardcoded flow complete)
@@ -165,6 +211,11 @@ validate/record hours; view (not download/share) volunteer info.
 
 ## Not doing right now
 
-- Final installation/setup commands (documented once the stack is picked)
+- Production deployment and login/session setup (local backend setup is in `server/README.md`)
 - Push notifications / reminders (open question, not committed to for MVP)
 - Admin backups/maintenance tooling beyond what the chosen backend provides out of the box
+
+Android connectivity follow-up: emulator-5554 is now available. Backend
+health and Metro status both pass. ADB reverse for ports 3000 and 8081
+was configured and Expo Go reopened through exp://127.0.0.1:8081; the
+welcome screen rendered. End-to-end form interaction remains pending.

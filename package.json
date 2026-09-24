@@ -34,6 +34,10 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "server:dev": "npm --prefix server run dev",
+    "server:build": "npm --prefix server run build",
+    "server:start": "npm --prefix server start",
+    "server:typecheck": "npm --prefix server run typecheck",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",

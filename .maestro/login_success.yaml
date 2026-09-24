@@ -1,0 +1,7 @@
+appId: com.voluntapp.app
+---
+- launchApp:
+    clearState: true
+
+- tapOn: 
+    text: "Iniciar Sesión"

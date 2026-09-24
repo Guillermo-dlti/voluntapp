@@ -3,7 +3,14 @@ import { ObjectId } from 'mongodb';
 import type { Collection } from 'mongodb';
 import { z } from 'zod';
 
+export interface UserSession {
+  tokenHash: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
 export interface User {
+  sessions?: UserSession[];
   _id: ObjectId;
   name: string;
   username: string;
@@ -66,5 +73,14 @@ export async function registerUser(users: Collection<User>, input: Registration)
     ...(input.phone === undefined ? {} : { phone: input.phone }),
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
+  };
+}
+
+export function publicUser(user: User) {
+  return {
+    id: user._id.toHexString(), name: user.name, username: user.username,
+    email: user.email, role: user.role, status: user.status,
+    ...(user.phone === undefined ? {} : { phone: user.phone }),
+    createdAt: user.createdAt.toISOString(), updatedAt: user.updatedAt.toISOString(),
   };
 }

@@ -1,85 +1,62 @@
-import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppFonts, Brand, Radius } from '@/constants/theme';
-import { CURRENT_VOLUNTEER } from '@/constants/mock-data';
+import { useAuth } from '@/providers/auth-provider';
+import { authMessage } from '@/services/auth';
+
+const roleNames = { volunteer: 'Voluntario', bamx_admin: 'Administrador BAMX', technical_admin: 'Administrador técnico' };
 
 export default function PerfilScreen() {
-  function handleLogout() {
-    router.replace('/(auth)/welcome');
-  }
+  const { user, signOut, refresh } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const pending = useRef(false);
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
+  async function handleLogout() {
+    if (pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    setMessage('');
+    try { await signOut(); }
+    catch (cause: unknown) { setMessage(authMessage(cause)); }
+    finally { pending.current = false; setBusy(false); }
+  }
+  if (!user) return null;
+  const initials = user.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  const details = [
+    ['Nombre de usuario', user.username], ['Correo electrónico', user.email],
+    ['Teléfono de contacto', user.phone || 'No registrado'],
+  ];
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header / Avatar Profile */}
         <View style={styles.profileHero}>
-          <View style={styles.avatarLarge}>
-            <Text style={styles.avatarText}>CR</Text>
-          </View>
-          <Text style={styles.name}>{CURRENT_VOLUNTEER.name}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{CURRENT_VOLUNTEER.role}</Text>
-          </View>
+          <View style={styles.avatarLarge}><Text style={styles.avatarText}>{initials}</Text></View>
+          <Text style={styles.name}>{user.name}</Text>
+          <View style={styles.roleBadge}><Text style={styles.roleText}>{roleNames[user.role]}</Text></View>
         </View>
-
-        {/* Account Info Cards */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Información de la cuenta</Text>
-
           <View style={styles.card}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Correo electrónico</Text>
-              <Text style={styles.infoValue}>{CURRENT_VOLUNTEER.email}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Teléfono de contacto</Text>
-              <Text style={styles.infoValue}>{CURRENT_VOLUNTEER.phone}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Sede asignada</Text>
-              <Text style={styles.infoValue}>BAMX Guadalajara Central</Text>
-            </View>
+            {details.map(([label, value], index) => <View key={label} style={{ gap: 12 }}>
+              {index > 0 && <View style={styles.divider} />}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{label}</Text>
+                <Text style={styles.infoValue}>{value}</Text>
+              </View>
+            </View>)}
           </View>
         </View>
-
-        {/* Participation Summary */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Resumen de voluntariado</Text>
-
-          <View style={styles.card}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Horas acumuladas</Text>
-              <Text style={[styles.infoValue, { color: Brand.primary }]}>
-                {CURRENT_VOLUNTEER.hoursTotal} hrs
-              </Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Actividades concluidas</Text>
-              <Text style={styles.infoValue}>
-                {CURRENT_VOLUNTEER.completedServices} servicios
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Logout Action */}
-        <Pressable
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar sesión">
-          <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
+        {message ? <Text accessibilityRole="alert" style={{ color: '#B91C1C' }}>{message}</Text> : null}
+        <Pressable style={[styles.logoutButton, busy && { opacity: 0.65 }]} disabled={busy}
+          onPress={() => void handleLogout()} accessibilityRole="button"
+          accessibilityState={{ disabled: busy, busy }} accessibilityLabel="Cerrar sesión">
+          {busy && <ActivityIndicator color="#DC2626" />}
+          <Text style={styles.logoutButtonText}>{busy ? 'Cerrando sesión…' : 'Cerrar Sesión'}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

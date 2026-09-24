@@ -1,4 +1,5 @@
 import express from 'express';
+import { authRouter } from './auth.js';
 import type { NextFunction, Request, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
@@ -68,6 +69,8 @@ export function createApp(database: Db, users: Collection<User>) {
       response.status(503).json({ message: 'No pudimos crear tu cuenta. Inténtalo de nuevo más tarde.' });
     }
   });
+
+  app.use('/api/auth', authRouter(users));
 
   app.use((_request, response) => {
     response.status(404).json({ message: 'No encontramos la ruta solicitada.' });

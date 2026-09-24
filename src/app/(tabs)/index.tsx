@@ -2,10 +2,14 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/providers/auth-provider';
+
 import { AppFonts, Brand, Radius } from '@/constants/theme';
-import { CURRENT_VOLUNTEER, MOCK_UPCOMING_ACTIVITIES } from '@/constants/mock-data';
+import { MOCK_UPCOMING_ACTIVITIES } from '@/constants/mock-data';
 
 export default function HomeHub() {
+  const { user } = useAuth();
+  const initials = user?.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   const nextActivity = MOCK_UPCOMING_ACTIVITIES[0];
 
   return (
@@ -15,14 +19,14 @@ export default function HomeHub() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Hola de nuevo,</Text>
-            <Text style={styles.name}>{CURRENT_VOLUNTEER.name}</Text>
+            <Text style={styles.name}>{user?.name}</Text>
           </View>
           <Pressable
             style={styles.avatarCircle}
             onPress={() => router.push('/(tabs)/perfil')}
             accessibilityRole="button"
             accessibilityLabel="Ir al perfil">
-            <Text style={styles.avatarText}>CR</Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           </Pressable>
         </View>
 

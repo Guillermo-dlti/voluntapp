@@ -1,8 +1,9 @@
 # Backend de Volunt-App
 
 API de registro con Node.js, TypeScript, Express y MongoDB Atlas. La app de
-Expo ya envía el formulario de registro a esta API. No hay login real,
-sesiones ni rutas para consultar otros usuarios; el resto de la app sigue simulado.
+Expo envía el registro y login a esta API. Perfil muestra los datos del usuario
+autenticado. Las actividades y horas siguen simuladas; no hay rutas públicas
+para consultar otros usuarios.
 
 ## Preparación
 
@@ -163,8 +164,8 @@ Esto permite mantener `EXPO_PUBLIC_API_URL=http://localhost:3000` y
 los puentes. Mantén el backend y Expo encendidos en sus dos terminales.
 
 El éxito borra la contraseña del formulario y muestra una confirmación; no
-abre las pestañas ni crea una sesión. El login sigue simulado y será el siguiente
-paso. Las cuentas creadas en este flujo sí son reales y permanecen en Atlas.
+abre las pestañas ni crea una sesión. La confirmación ofrece iniciar sesión. Las cuentas creadas en este flujo
+son reales y permanecen en Atlas.
 
 Este servidor escucha localmente por defecto. Antes de exponerlo en internet
 se requiere HTTPS y configurar el límite de solicitudes/proxy para el despliegue.
@@ -180,3 +181,42 @@ npx tsc --noEmit
 
 No se añadió un test runner. Usa las solicitudes manuales anteriores y,
 cuando se integre la pantalla, recorre el flujo real en el simulador.
+
+## Inicio de sesión y Perfil
+
+- `POST /api/auth/login`: JSON con `identifier` (correo o usuario) y `password`.
+  Devuelve `token`, `expiresAt` y los datos públicos de `user`. Credenciales
+  incorrectas o cuenta inactiva: HTTP 401 con el mismo mensaje; 20 intentos
+  por IP cada 15 minutos. No revela si una cuenta existe.
+- `GET /api/auth/me`: requiere `Authorization: Bearer TOKEN`. Devuelve solo
+  la cuenta del token. HTTP 401 si falta el token, venció o la cuenta está inactiva.
+- `POST /api/auth/logout`: requiere el mismo encabezado; elimina esa sesión.
+  Devuelve HTTP 204 incluso si el token ya no existe. Otras sesiones permanecen.
+
+Las sesiones duran 30 días y se guardan dentro de `users.sessions` con un hash
+SHA-256 del token aleatorio de 256 bits, fecha de creación y vencimiento. Nunca
+se guarda el token original en MongoDB. Cada usuario tiene como máximo cinco
+sesiones; un sexto login invalida la más antigua. Los vencimientos se comprueban
+en cada petición, sin depender de una limpieza programada. No se usa un índice
+TTL sobre users, porque borraría la cuenta completa.
+
+En Android/iOS el token se guarda en Expo SecureStore; la contraseña no se
+persiste. Al abrir la app o volver del segundo plano se valida la sesión con
+`/me`; Perfil también actualiza los datos al enfocarse. Si el backend no está
+disponible durante la restauración, se ofrece reintentar sin borrar la sesión.
+Cerrar sesión requiere conexión para revocar el token; si falla, se muestra
+un error y se permite reintentar. En web la sesión solo vive en memoria; la
+integración web/CORS y las sesiones web persistentes quedan fuera de este paso.
+
+Prueba manual en Android (backend y Expo encendidos, ADB reverse configurado):
+
+1. Inicia sesión con un usuario registrado y su contraseña; comprueba el nombre en Inicio.
+2. Abre Perfil: nombre, usuario, correo y rol deben corresponder a esa cuenta.
+3. Cierra completamente Expo Go y vuelve a abrir el proyecto: debe restaurarse la sesión.
+4. Cierra sesión desde Perfil: debe volver a la bienvenida y no permitir abrir las pestañas.
+5. Prueba una contraseña incorrecta: debe permanecer en Login con un mensaje legible.
+6. Inicia sesión usando el correo en lugar del nombre de usuario.
+
+Perfil no muestra la sede, horas ni servicios ficticios como si fueran datos
+de la cuenta real. Las otras pantallas de actividades/impacto conservan sus mocks.
+El perfil es de consulta; editarlo y recuperar contraseñas son pasos posteriores.

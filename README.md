@@ -3,8 +3,8 @@
 El backend de usuarios está en `server/`. Consulta la
 [guía de configuración de MongoDB, inicio y registro](server/README.md).
 Desde la raíz: `npm --prefix server ci` y `npm run server:dev`.
-La pantalla de registro ya guarda cuentas mediante la API; el login y las
-demás pantallas siguen simulados. Para probar el registro en iOS, inicia el
+Registro y login usan la API; Perfil muestra la cuenta autenticada. Las
+actividades y horas siguen simuladas. Para probar en iOS, inicia el
 backend y ejecuta `npm run ios` en otra terminal.
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).

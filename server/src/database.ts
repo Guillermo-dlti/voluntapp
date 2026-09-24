@@ -16,6 +16,7 @@ export async function connectDatabase(uri: string, databaseName: string) {
     await users.createIndexes([
       { key: { email: 1 }, name: 'users_email_unique', unique: true },
       { key: { username: 1 }, name: 'users_username_unique', unique: true },
+      { key: { 'sessions.tokenHash': 1 }, name: 'users_session_tokens', sparse: true },
     ]);
     return { client, database, users };
   } catch (error: unknown) {

@@ -17,7 +17,8 @@ Backend: Node.js + TypeScript API in `server/`, MongoDB Atlas (`voluntapp`).
 Registration uses email/password; passwords are stored as Argon2id hashes.
 
 **Not yet decided** (real open questions carried over from Stage 1):
-- Login/session method
+- Session method decided: opaque 256-bit bearer tokens, SHA-256 hashes in users.sessions,
+  30-day expiry, at most 5 sessions per user; native token storage via Expo SecureStore.
 - Notification/reminder system
 - Whether volunteers self-enter hours or only BAMX validates them
 
@@ -58,13 +59,13 @@ starting with `+` and containing 8–15 digits. No user-list endpoint is public.
 | 2 | Coding standards & tooling | Foundation | not started |
 | 3 | Backend & data model | Foundation | in progress (users API) |
 | 4 | Design & look | Foundation | in progress |
-| 5 | Onboarding: Welcome, Login, Sign Up | Slice 1 | registration connected; login mock |
+| 5 | Onboarding: Welcome, Login, Sign Up | Slice 1 | registration/login connected |
 | 6 | Home Hub | Slice 1 | done (mock) |
 | 7 | Oportunidades: list, details, register, confirmation | Slice 1 | done (mock) |
 | 8 | Mis Actividades: upcoming/past, cancellation | Slice 2 | done (mock) |
 | 9 | Attendance / Check-In | Slice 2 | done (mock) |
 | 10 | Mi Impacto (hours, services, kg) | Slice 2 | done (mock) |
-| 11 | Perfil: view/edit, logout | Slice 2 | done (mock) |
+| 11 | Perfil: view/edit, logout | Slice 2 | real view/logout; editing pending |
 | 12 | Admin module | Slice 3 | not started |
 
 ## Foundation
@@ -91,7 +92,7 @@ Figma prototype, plus an auth stack (Welcome → Login/Sign Up) in front of it.
 ### 3. Backend & data model
 
 - [x] Decide the backend (Node.js/TypeScript API + MongoDB Atlas)
-- [ ] Decide the auth method
+- [x] Decide the auth method (opaque revocable sessions + Expo SecureStore)
 - [ ] Implement the Volunteer/Activity/Registration/Attendance/Hours schema
 - [ ] Decide whether volunteers self-report hours or only admins validate
 
@@ -109,13 +110,12 @@ Mobile registration build:
 - [x] Add username, field validation, loading and success states to registration
 - [x] Configure public API URL and document emulator startup
 - [x] Verify types and registration through the client against Atlas
-- [ ] Walk the real registration flow in a simulator (no simulator devices/runtimes installed here)
+- [x] Walk the real registration flow in Android (user confirmed persistence in Atlas)
 
 Mobile verification: Expo and server typechecks pass; iOS export succeeds.
 The actual client function was exercised against the API and Atlas: successful
 registration/persistence, duplicate handling, validation and offline messaging
-pass. The temporary account was removed. UI keyboard/layout verification is
-pending on an installed simulator.
+pass. The temporary account was removed. Registration was subsequently confirmed by the user in Android.
 
 Verification: server build/typecheck and Expo typecheck pass. Manual HTTP
 checks with a substituted in-memory collection cover successful registration,
@@ -141,7 +141,7 @@ translated into actual design tokens/theme constants.
 
 Registration now submits name, username, email and password to the API and
 shows an account-created confirmation. It does not grant a session or open
-the tabs. Login remains mocked; real login/session handling is a later build.
+the tabs. Login now validates credentials and restores a persisted native session.
 
 - [x] Decide the approach
 - [x] Build it (hardcoded flow complete)
@@ -211,11 +211,34 @@ validate/record hours; view (not download/share) volunteer info.
 
 ## Not doing right now
 
-- Production deployment and login/session setup (local backend setup is in `server/README.md`)
+- Production deployment, password recovery and persistent web sessions (local setup is in `server/README.md`)
 - Push notifications / reminders (open question, not committed to for MVP)
 - Admin backups/maintenance tooling beyond what the chosen backend provides out of the box
 
 Android connectivity follow-up: emulator-5554 is now available. Backend
 health and Metro status both pass. ADB reverse for ports 3000 and 8081
 was configured and Expo Go reopened through exp://127.0.0.1:8081; the
-welcome screen rendered. End-to-end form interaction remains pending.
+welcome screen rendered. The user subsequently confirmed registration in Atlas.
+
+## Current build: login and personal profile
+
+Sessions are embedded in `users` (no new collection): `tokenHash`, `createdAt`,
+`expiresAt`. Only the random raw token goes to the client. Every protected
+request checks expiry and active user status; logout removes the session.
+Profile responses explicitly select public account fields.
+
+- [x] Implement rate-limited login by username/email, current-user and logout endpoints
+- [x] Persist native session securely, restore on launch and handle expired/offline sessions
+- [x] Protect the tabs and connect login/registration success navigation
+- [x] Show real account fields in Profile and real name on Home
+- [x] Verify API isolation, expiry, revocation, invalid login and existing registration
+- [x] Verify Android login, profile, restart persistence and logout
+
+Login verification: server build and both typechecks pass. Manual API checks
+against Atlas pass for registration, email/username login, wrong credentials,
+invalid payload, own-profile isolation, safe response fields, hashed tokens,
+expiry, inactive accounts, logout revocation and five-session cap. Android
+Expo Go walkthrough passes: login, real profile/name, process restart with
+SecureStore restoration, logout back to welcome, and protected profile deep
+link after logout. Confirmed session deletion in Atlas; temporary accounts
+were removed. Production transport requires HTTPS. No test runner added.

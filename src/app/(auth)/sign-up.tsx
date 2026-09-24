@@ -58,9 +58,9 @@ export default function SignUp() {
               <Text accessibilityLiveRegion="polite" style={styles.description}>
                 Tu registro se completó correctamente. Gracias por sumarte como voluntario.
               </Text>
-              <Text style={styles.description}>Pronto podrás iniciar sesión con tu cuenta.</Text>
-              <Pressable accessibilityRole="button" style={styles.button} onPress={() => router.replace('/(auth)/welcome')}>
-                <Text style={styles.buttonText}>Volver al inicio</Text>
+              <Text style={styles.description}>Ya puedes iniciar sesión con tu correo o nombre de usuario.</Text>
+              <Pressable accessibilityRole="button" style={styles.button} onPress={() => router.replace('/(auth)/login')}>
+                <Text style={styles.buttonText}>Iniciar sesión</Text>
               </Pressable>
             </View>
           ) : (

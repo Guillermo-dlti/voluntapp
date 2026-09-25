@@ -69,7 +69,19 @@ export const Brand = {
   text: '#0F172A',
   textSecondary: '#475569',
   border: '#CBD5E1',
+  divider: '#F1F5F9',
+  surface: '#FFFFFF',
   surfaceMuted: '#F8FAFC',
+  background: '#FAFAFA',
+  // Status colors for errors, activity and attendance states.
+  danger: '#DC2626',
+  dangerText: '#B91C1C',
+  dangerBorder: '#EF4444',
+  dangerLight: '#FEF2F2',
+  warning: '#B45309',
+  warningLight: '#FFFBEB',
+  success: '#15803D',
+  successLight: '#F0FDF4',
 } as const;
 
 export const Radius = {

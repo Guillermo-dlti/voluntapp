@@ -26,7 +26,7 @@ The security course grades authentication, authorization, data protection, and a
 - **AC-2**: All data lives in MongoDB Atlas (`voluntapp`) and is only reached through the Express API in `server/`; the app never holds the Mongo URI.
 - **AC-3**: Every API route checks the staff session and role on the server before touching data.
 - **AC-4**: Staff sessions are opaque random tokens: the phone stores the raw token in Expo SecureStore, the server stores only its SHA-256 hash with an expiry, and logout or deactivation revokes it immediately.
-- **AC-5**: No v1 code is deleted. v1 screens that the admin app replaces are moved out of `src/app` (only after the team approves the move), and the last v1 commit is tagged.
+- **AC-5**: v1 stays recoverable. The last v1 commit is tagged `v1`; the admin screens replace the v1 volunteer screens in place (decided with the team on 2026-09-25: cleaner than keeping a `legacy/` copy in the tree).
 
 ## Options considered
 
@@ -91,7 +91,7 @@ On sessions: the security goal behind "`httpOnly` cookies" is that scripts can't
 ## Build plan
 
 1. Tag the last v1 commit (`v1`), satisfies **AC-5**
-2. Move v1 volunteer screens out of `src/app` after the team approves, satisfies **AC-5**
+2. Replace the v1 volunteer screens in `src/app` with the admin screens, satisfies **AC-5**
 3. Staff session and role middleware on the API, satisfies **AC-3**, **AC-4**
 4. Admin tab structure in `src/app` on Android, satisfies **AC-1**
 5. All data access through the API with the URI only in the server `.env`, satisfies **AC-2**

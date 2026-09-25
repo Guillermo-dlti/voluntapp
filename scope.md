@@ -29,7 +29,7 @@ The one path the MVP has to walk end to end:
 
 | # | Feature | Status |
 |---|---|---|
-| 0 | Stack decision + foundation | stack decided; foundation next |
+| 0 | Stack decision + foundation | built; waiting on your review |
 | 1 | Staff auth & roles | not started (v1 auth code largely reusable) |
 | 2 | Volunteers | not started |
 | 3 | Activities & assignments | not started |
@@ -44,16 +44,23 @@ The one path the MVP has to walk end to end:
 Same app, same stack; lay the ground every later feature stands on.
 
 - [x] Decide the stack: same Expo Android app + Express + MongoDB (spec 0001)
-- [ ] Tag the last v1 commit `v1`
-- [ ] Move the v1 volunteer screens out of `src/app` (needs team approval first; nothing deleted)
-- [ ] Restore a committed `.env.example` (names only) and remove it from `.gitignore`
-- [ ] Server: one startup step that creates every v2 collection with its `$jsonSchema` validator and indexes
-- [ ] Server: shared audit log writer (insert only) and a logger that never prints personal data
-- [ ] Server: `permissions.ts` with the role table from `AGENTS.md`
-- [ ] App: admin tab shell (Inicio, Voluntarios, Actividades, Reportes, Ajustes) with placeholder screens
-- [ ] Design tokens: BAMX colors and the Outfit/Geist fonts in `src/constants/theme.ts`
-- [ ] Add a root `typecheck` script covering app and server
-- [ ] Verify: app builds on the Android emulator, `/health` passes against Atlas, the v2 collections and indexes show up in Atlas
+- [x] Tag the last v1 commit `v1` (local tag; push it with `git push origin v1`)
+- [x] Replace the v1 volunteer screens in `src/app` with the admin tabs (v1 kept under the tag)
+- [x] Restore a committed `.env.example` (names only) and remove it from `.gitignore`
+- [x] Server: one startup step that creates every v2 collection with its `$jsonSchema` validator and indexes (`server/src/collections.ts`)
+- [x] Server: shared audit log writer (insert only, strips `passwordHash`/`sessions`) and a logger that drops personal data keys (`server/src/audit.ts`, `server/src/logger.ts`)
+- [x] Server: `permissions.ts` with the role table from `AGENTS.md`
+- [x] App: admin tab shell (Inicio, Voluntarios, Actividades, Reportes, Ajustes) with placeholder screens
+- [x] Design tokens: Figma green palette plus status colors in `src/constants/theme.ts`; Outfit/Geist fonts
+- [x] Add a root `typecheck` script covering app and server (`npm run typecheck`)
+- [x] Verify: typecheck passes; `/health` 200 against Atlas; all six v2 collections exist with validators and indexes; invalid documents are rejected (code 121); the five tabs render on the Android emulator
+
+Notes: the app still logs in with v1 volunteer accounts until feature 1 swaps
+in staff auth, so Ajustes shows the v1 role. `audit_log` is insert only in
+the API; making it insert only in the database too (an Atlas custom role for
+the app's user, without update/remove on `audit_log`) is listed under
+Hardening. The unused `audit.ts`/`permissions.ts` get their first callers in
+feature 1.
 
 ## 1. Staff auth & roles
 
@@ -117,6 +124,7 @@ Same app, same stack; lay the ground every later feature stands on.
 - [ ] Tests for the business rules: capacity race, overlap, assigning a closed activity or an inactive volunteer, hours over the duration, a non-admin editing finalized attendance
 - [ ] Check that no endpoint hard deletes and none returns `passwordHash`
 - [ ] Review the logs for personal data
+- [ ] Atlas custom role for the API's database user: no `update`/`remove` on `audit_log`, no `dropCollection` (makes insert only true in the database, not just the API)
 
 ## v1 code (kept, not deleted)
 
@@ -145,9 +153,8 @@ v1 was the same Expo SDK 57 app aimed at volunteers. None of it is deleted.
 
 - Volunteer screens in `src/app`: welcome, sign-up, and the tabs Ofertas,
   Mis Actividades (with QR check-in), Impacto, plus the volunteer Inicio and
-  Perfil. Most run on `src/constants/mock-data.ts`. The admin tabs replace
-  them; they move out of `src/app` (Expo Router would otherwise still route
-  them) only after the team approves.
+  Perfil, with `mock-data.ts` and the QR component. Replaced by the admin
+  tabs in feature 0; the code lives on under the git tag `v1`.
 - Public volunteer self-registration `POST /api/auth/register` and the
   `users` collection with the `volunteer` role. Volunteers don't log in in
   v2, so feature 1 decides whether to switch the endpoint off.

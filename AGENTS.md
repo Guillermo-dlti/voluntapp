@@ -6,7 +6,7 @@ An Android admin app for Banco de Alimentos de Guadalajara (BAMX). BAMX staff us
 
 The users are BAMX staff, with three roles: **admin**, **coordinator**, **supervisor**. Volunteers are records that staff manage. **Volunteers do not log in.** Don't build volunteer-facing features unless explicitly asked.
 
-This is v2. v1 was the same app aimed at volunteers (self sign-up, browsing shifts, QR check-in). Same stack, same repo; the volunteer screens get replaced by admin screens. No v1 code is deleted (see `scope.md` → "v1 code").
+This is v2. v1 was the same app aimed at volunteers (self sign-up, browsing shifts, QR check-in). Same stack, same repo; the admin screens replaced the volunteer screens in place. The full v1 app is preserved under the git tag `v1` (`git checkout v1`); see `scope.md` → "v1 code".
 
 Built for TC2005B.502, Grupo 402. **Security is graded** in the team's Cybersecurity course ("Integración de seguridad informática en redes y sistemas de software"), so authorization, data protection, and auditability are requirements, not polish.
 

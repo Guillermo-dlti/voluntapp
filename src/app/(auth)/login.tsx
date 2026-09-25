@@ -39,15 +39,16 @@ export default function Login() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {!busy && <BackButton inline />}
           <Text accessibilityRole="header" style={styles.title}>Iniciar Sesión</Text>
-          <FormField label="Correo o nombre de usuario" value={identifier} editable={!busy}
+          <FormField testID="login-email-input" label="Correo o nombre de usuario" value={identifier} editable={!busy}
             onChangeText={(value) => { setIdentifier(value); setErrors({}); setMessage(''); }} error={errors.identifier}
             autoCapitalize="none" autoCorrect={false} autoComplete="username" maxLength={254} />
-          <FormField label="Contraseña" value={password} editable={!busy}
+          <FormField testID="login-password-input" label="Contraseña" value={password} editable={!busy}
             onChangeText={(value) => { setPassword(value); setErrors({}); setMessage(''); }} error={errors.password}
             secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="current-password"
             maxLength={128} returnKeyType="go" onSubmitEditing={() => void handleLogin()} />
           {message || sessionError ? <Text accessibilityRole="alert" style={styles.error}>{message || sessionError}</Text> : null}
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy, busy }} disabled={busy}
+          <Pressable testID="login-submit-button" accessibilityRole="button" accessibilityLabel="Ingresar"
+            accessibilityState={{ disabled: busy, busy }} disabled={busy}
             style={[styles.button, busy && { opacity: 0.65 }]} onPress={() => void handleLogin()}>
             {busy && <ActivityIndicator color="#fff" />}
             <Text style={styles.buttonText}>{busy ? 'Ingresando…' : 'Ingresar'}</Text>

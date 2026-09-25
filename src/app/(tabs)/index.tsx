@@ -13,12 +13,12 @@ export default function HomeHub() {
   const nextActivity = MOCK_UPCOMING_ACTIVITIES[0];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView testID="home-screen" style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header: Greeting & Profile Avatar */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Hola de nuevo,</Text>
+            <Text testID="home-greeting" style={styles.greeting}>Hola de nuevo,</Text>
             <Text style={styles.name}>{user?.name}</Text>
           </View>
           <Pressable

@@ -1,7 +1,43 @@
 appId: com.voluntapp.app
+name: Login exitoso de una persona voluntaria registrada
+# Requiere el backend encendido y las credenciales de una cuenta real:
+# maestro test -e TEST_EMAIL=... -e TEST_PASSWORD=... .maestro/login_success.yaml
 ---
 - launchApp:
     clearState: true
 
-- tapOn: 
-    text: "Iniciar Sesión"
+# El primer arranque descarga el bundle y restaura la sesión (vacía tras
+# clearState), así que la pantalla de bienvenida puede tardar en aparecer.
+- extendedWaitUntil:
+    visible:
+      id: "login-navigation-button"
+    timeout: 60000
+
+- tapOn:
+    id: "login-navigation-button"
+
+- assertVisible:
+    id: "login-email-input"
+
+- tapOn:
+    id: "login-email-input"
+- inputText: ${TEST_EMAIL}
+
+- tapOn:
+    id: "login-password-input"
+- inputText: ${TEST_PASSWORD}
+
+- hideKeyboard
+
+- tapOn:
+    id: "login-submit-button"
+
+# El login llama a la API y el stack protegido cambia a (tabs) al recibir la
+# sesión; esperar por el contenedor de Inicio cubre esa latencia de red.
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 30000
+
+- assertVisible:
+    id: "home-greeting"

@@ -242,3 +242,20 @@ Expo Go walkthrough passes: login, real profile/name, process restart with
 SecureStore restoration, logout back to welcome, and protected profile deep
 link after logout. Confirmed session deletion in Atlas; temporary accounts
 were removed. Production transport requires HTTPS. No test runner added.
+
+## Current build: automated login flow with Maestro
+
+Flows live in `.maestro/`, one file per acceptance criterion, named
+`<caso>_<resultado>.yaml`. Maestro drives the real app against the real API —
+no mocks, no test runner, no extra framework. Credentials come in through
+`-e TEST_EMAIL` / `-e TEST_PASSWORD`; the repository never holds real ones.
+Flows select elements by `testID`, never by coordinates, so copy changes don't
+break them.
+
+- [x] Add stable `testID`s to the login path: welcome button, both login
+      fields, submit button, Home container and greeting
+- [x] Write `.maestro/login_success.yaml` (clean state → welcome → login →
+      credentials → Home assertion) with waits instead of fixed sleeps
+- [x] Document the required `.env` keys, including the Android emulator API URL
+- [ ] Run the flow on the emulator against the real backend (blocked until
+      `npm install` and a root `.env` exist in this checkout)

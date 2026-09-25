@@ -18,6 +18,9 @@ export default function Welcome() {
 
       <View style={styles.buttonGroup}>
         <Pressable
+          testID="login-navigation-button"
+          accessibilityRole="button"
+          accessibilityLabel="Iniciar Sesión"
           style={styles.primaryButton}
           onPress={() => router.push('/(auth)/login')}>
           <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>

@@ -1,5 +1,5 @@
 appId: com.voluntapp.app
-name: Login exitoso de una persona voluntaria registrada
+name: Login exitoso de una cuenta registrada
 # Requiere el backend encendido y las credenciales de una cuenta real:
 # maestro test -e TEST_EMAIL=... -e TEST_PASSWORD=... .maestro/login_success.yaml
 ---
@@ -57,12 +57,12 @@ name: Login exitoso de una persona voluntaria registrada
 
 # La barra es nativa: NativeTabs.Trigger no acepta testID, así que la pestaña
 # se toca por su etiqueta del sistema, la única propiedad que expone.
-- tapOn: "Perfil"
+- tapOn: "Ajustes"
 
 - extendedWaitUntil:
     visible:
-      id: "profile-screen"
+      id: "settings-screen"
     timeout: 20000
 
 - assertVisible:
-    id: "profile-account-section"
+    id: "settings-account-section"

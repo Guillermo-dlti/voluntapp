@@ -9,7 +9,7 @@ import { authMessage } from '@/services/auth';
 
 const roleNames = { volunteer: 'Voluntario', bamx_admin: 'Administrador BAMX', technical_admin: 'Administrador técnico' };
 
-export default function PerfilScreen() {
+export default function SettingsScreen() {
   const { user, signOut, refresh } = useAuth();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -32,15 +32,16 @@ export default function PerfilScreen() {
     ['Teléfono de contacto', user.phone || 'No registrado'],
   ];
   return (
-    <SafeAreaView testID="profile-screen" style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView testID="settings-screen" style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <Text accessibilityRole="header" style={styles.title}>Ajustes</Text>
         <View style={styles.profileHero}>
           <View style={styles.avatarLarge}><Text style={styles.avatarText}>{initials}</Text></View>
           <Text style={styles.name}>{user.name}</Text>
           <View style={styles.roleBadge}><Text style={styles.roleText}>{roleNames[user.role]}</Text></View>
         </View>
         <View style={styles.section}>
-          <Text testID="profile-account-section" style={styles.sectionTitle}>Información de la cuenta</Text>
+          <Text testID="settings-account-section" style={styles.sectionTitle}>Información de la cuenta</Text>
           <View style={styles.card}>
             {details.map(([label, value], index) => <View key={label} style={{ gap: 12 }}>
               {index > 0 && <View style={styles.divider} />}
@@ -51,11 +52,17 @@ export default function PerfilScreen() {
             </View>)}
           </View>
         </View>
-        {message ? <Text accessibilityRole="alert" style={{ color: '#B91C1C' }}>{message}</Text> : null}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Administración</Text>
+          <View style={styles.card}>
+            <Text style={styles.infoLabel}>Próximamente, solo para administradores: gestión del personal y bitácora de auditoría.</Text>
+          </View>
+        </View>
+        {message ? <Text accessibilityRole="alert" style={{ color: Brand.dangerText }}>{message}</Text> : null}
         <Pressable style={[styles.logoutButton, busy && { opacity: 0.65 }]} disabled={busy}
           onPress={() => void handleLogout()} accessibilityRole="button"
           accessibilityState={{ disabled: busy, busy }} accessibilityLabel="Cerrar sesión">
-          {busy && <ActivityIndicator color="#DC2626" />}
+          {busy && <ActivityIndicator color={Brand.danger} />}
           <Text style={styles.logoutButtonText}>{busy ? 'Cerrando sesión…' : 'Cerrar Sesión'}</Text>
         </Pressable>
       </ScrollView>
@@ -66,7 +73,12 @@ export default function PerfilScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: Brand.background,
+  },
+  title: {
+    fontFamily: AppFonts.heading,
+    fontSize: 26,
+    color: Brand.text,
   },
   container: {
     padding: 24,
@@ -100,7 +112,7 @@ const styles = StyleSheet.create({
     color: Brand.text,
   },
   roleBadge: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Brand.border,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: Radius.pill,
@@ -119,7 +131,7 @@ const styles = StyleSheet.create({
     color: Brand.text,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Brand.surface,
     borderWidth: 1.5,
     borderColor: Brand.border,
     borderRadius: Radius.card,
@@ -141,20 +153,20 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Brand.divider,
   },
   logoutButton: {
     borderWidth: 1.5,
-    borderColor: '#EF4444',
+    borderColor: Brand.dangerBorder,
     borderRadius: Radius.button,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Brand.dangerLight,
   },
   logoutButtonText: {
     fontFamily: AppFonts.bodySemiBold,
-    color: '#DC2626',
+    color: Brand.danger,
     fontSize: 16,
   },
 });

@@ -34,7 +34,8 @@ yarn-error.*
 .env*.local
 .env.local
 .env
-.env.example
+# .env.example is committed on purpose: variable names only, never real values.
+!.env.example
 
 # Claude Code local overrides
 .claude/settings.local.json

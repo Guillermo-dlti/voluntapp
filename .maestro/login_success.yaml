@@ -6,12 +6,25 @@ name: Login exitoso de una persona voluntaria registrada
 - launchApp:
     clearState: true
 
-# El primer arranque descarga el bundle y restaura la sesión (vacía tras
-# clearState), así que la pantalla de bienvenida puede tardar en aparecer.
+# clearState borra los datos de la app, así que el development build abre el
+# launcher de expo-dev-client en vez del bundle. Si aparece, entramos por el
+# servidor de Metro que lista; con un build de release el bloque se omite.
+- runFlow:
+    when:
+      visible: "(?i).*development build.*"
+    commands:
+      # El launcher tarda un momento en descubrir Metro en la red local.
+      - extendedWaitUntil:
+          visible: ".*:8081.*"
+          timeout: 30000
+      - tapOn: ".*:8081.*"
+
+# Descargar el bundle y restaurar la sesión (vacía tras clearState) tarda,
+# así que la pantalla de bienvenida puede aparecer con retraso.
 - extendedWaitUntil:
     visible:
       id: "login-navigation-button"
-    timeout: 60000
+    timeout: 90000
 
 - tapOn:
     id: "login-navigation-button"

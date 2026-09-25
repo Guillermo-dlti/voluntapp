@@ -32,7 +32,7 @@ export default function PerfilScreen() {
     ['Teléfono de contacto', user.phone || 'No registrado'],
   ];
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView testID="profile-screen" style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.profileHero}>
           <View style={styles.avatarLarge}><Text style={styles.avatarText}>{initials}</Text></View>
@@ -40,7 +40,7 @@ export default function PerfilScreen() {
           <View style={styles.roleBadge}><Text style={styles.roleText}>{roleNames[user.role]}</Text></View>
         </View>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Información de la cuenta</Text>
+          <Text testID="profile-account-section" style={styles.sectionTitle}>Información de la cuenta</Text>
           <View style={styles.card}>
             {details.map(([label, value], index) => <View key={label} style={{ gap: 12 }}>
               {index > 0 && <View style={styles.divider} />}

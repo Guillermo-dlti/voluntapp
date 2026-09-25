@@ -253,9 +253,15 @@ Flows select elements by `testID`, never by coordinates, so copy changes don't
 break them.
 
 - [x] Add stable `testID`s to the login path: welcome button, both login
-      fields, submit button, Home container and greeting
+      fields, submit button, Home container and greeting, Perfil container and
+      its account section
 - [x] Write `.maestro/login_success.yaml` (clean state → welcome → login →
-      credentials → Home assertion) with waits instead of fixed sleeps
+      credentials → Home → Perfil tab) with waits instead of fixed sleeps
+- [x] Skip the expo-dev-client launcher when `clearState` wipes the saved Metro
+      server, without hardcoding anyone's LAN address
 - [x] Document the required `.env` keys, including the Android emulator API URL
-- [ ] Run the flow on the emulator against the real backend (blocked until
-      `npm install` and a root `.env` exist in this checkout)
+- [x] Run the flow on the emulator against the real backend (passes)
+
+The Perfil tab is the one element selected by visible text: `NativeTabs.Trigger`
+takes no `testID` or accessibility props in SDK 57, and the bar is real OS
+chrome, so its system label is the only stable handle.

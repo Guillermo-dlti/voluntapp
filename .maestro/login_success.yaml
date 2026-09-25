@@ -54,3 +54,15 @@ name: Login exitoso de una persona voluntaria registrada
 
 - assertVisible:
     id: "home-greeting"
+
+# La barra es nativa: NativeTabs.Trigger no acepta testID, así que la pestaña
+# se toca por su etiqueta del sistema, la única propiedad que expone.
+- tapOn: "Perfil"
+
+- extendedWaitUntil:
+    visible:
+      id: "profile-screen"
+    timeout: 20000
+
+- assertVisible:
+    id: "profile-account-section"

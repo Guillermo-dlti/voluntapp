@@ -40,6 +40,7 @@
     "server:build": "npm --prefix server run build",
     "server:start": "npm --prefix server start",
     "server:typecheck": "npm --prefix server run typecheck",
+    "server:seed": "npm --prefix server run seed:staff",
     "typecheck": "tsc --noEmit && npm --prefix server run typecheck",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",

@@ -1,14 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
-import { AuthError, authMessage, currentAccount, loginAccount, logoutAccount, type Account } from '@/services/auth';
+import { AuthError, authMessage, currentStaff, loginStaff, logoutStaff, type Staff } from '@/services/auth';
 import { readSession, removeSession, saveSession } from '@/services/session-storage';
 
 interface AuthContextValue {
-  user: Account | null;
+  user: Staff | null;
   status: 'loading' | 'ready' | 'error';
   error: string;
-  signIn: (identifier: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -16,7 +16,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Account | null>(null);
+  const [user, setUser] = useState<Staff | null>(null);
   const [status, setStatus] = useState<AuthContextValue['status']>('loading');
   const [error, setError] = useState('');
   const tokenRef = useRef<string | null>(null);
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const version = generation.current;
     try {
       const token = tokenRef.current ?? await readSession();
-      const account = token ? await currentAccount(token) : null;
+      const account = token ? await currentStaff(token) : null;
       if (version !== generation.current) return;
       tokenRef.current = token;
       setUser(account);
@@ -58,20 +58,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [refresh]);
 
-  const signIn = useCallback(async (identifier: string, password: string) => {
-    const session = await loginAccount(identifier, password);
+  const signIn = useCallback(async (email: string, password: string) => {
+    const session = await loginStaff(email, password);
     try { await saveSession(session.token); }
-    catch (cause: unknown) { await logoutAccount(session.token).catch(() => undefined); throw cause; }
+    catch (cause: unknown) { await logoutStaff(session.token).catch(() => undefined); throw cause; }
     generation.current += 1;
     tokenRef.current = session.token;
-    setUser(session.user);
+    setUser(session.staff);
     setError('');
     setStatus('ready');
   }, []);
 
   const signOut = useCallback(async () => {
     const token = tokenRef.current ?? await readSession();
-    if (token) await logoutAccount(token);
+    if (token) await logoutStaff(token);
     await removeSession();
     generation.current += 1;
     tokenRef.current = null;

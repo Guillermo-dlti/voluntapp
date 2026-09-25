@@ -42,7 +42,7 @@ function SessionNavigation() {
   const { user, status, error, refresh } = useAuth();
   if (status !== 'ready') {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16, backgroundColor: '#fff' }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16, backgroundColor: Brand.background }}>
         {status === 'loading' ? <ActivityIndicator color={Brand.primary} /> : <>
           <Text accessibilityRole="alert" style={{ color: Brand.text, textAlign: 'center' }}>{error}</Text>
           <Pressable accessibilityRole="button" onPress={() => void refresh()} style={{ padding: 16 }}>

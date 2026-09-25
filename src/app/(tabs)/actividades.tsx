@@ -1,16 +1,14 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { EmptyState } from '@/components/empty-state';
+import { Screen } from '@/components/screen';
 
 export default function ActivitiesScreen() {
   return (
-    <ScreenPlaceholder
-      testID="activities-screen"
-      title="Actividades"
-      subtitle="Turnos, cupos y asistencia"
-      upcoming={[
-        'Crear y editar actividades con cupo y horario',
-        'Asignar voluntarios respetando el cupo y sin traslapes',
-        'Registrar asistencia y horas, y finalizarla',
-      ]}
-    />
+    <Screen testID="activities-screen" title="Actividades" subtitle="Turnos, cupos y asistencia">
+      <EmptyState
+        icon={{ ios: 'calendar', android: 'calendar_month' }}
+        title="No hay actividades"
+        body="Aquí vas a crear turnos con horario y cupo, asignar voluntarios y tomar asistencia. Esta sección llega en la siguiente versión."
+      />
+    </Screen>
   );
 }

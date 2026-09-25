@@ -1,29 +1,31 @@
-export interface Account {
+export type StaffRole = 'admin' | 'coordinator' | 'supervisor';
+
+export interface Staff {
   id: string;
-  name: string;
-  username: string;
+  fullName: string;
   email: string;
-  role: 'volunteer' | 'bamx_admin' | 'technical_admin';
-  status: 'active' | 'inactive';
-  phone?: string;
+  role: StaffRole;
+  active: boolean;
 }
 
 export class AuthError extends Error {
   constructor(message: string, public readonly status = 0) { super(message); }
 }
 
-function isAccount(value: unknown): value is Account {
+const roles: readonly string[] = ['admin', 'coordinator', 'supervisor'];
+
+// The API is trusted but its responses are still checked, so a malformed reply becomes a
+// plain error instead of a crash deep inside a screen.
+function isStaff(value: unknown): value is Staff {
   if (typeof value !== 'object' || value === null) return false;
   return 'id' in value && typeof value.id === 'string'
-    && 'name' in value && typeof value.name === 'string'
-    && 'username' in value && typeof value.username === 'string'
+    && 'fullName' in value && typeof value.fullName === 'string'
     && 'email' in value && typeof value.email === 'string'
-    && 'role' in value && ['volunteer', 'bamx_admin', 'technical_admin'].includes(String(value.role))
-    && 'status' in value && ['active', 'inactive'].includes(String(value.status))
-    && (!('phone' in value) || typeof value.phone === 'string');
+    && 'role' in value && roles.includes(String(value.role))
+    && 'active' in value && typeof value.active === 'boolean';
 }
 
-async function request(path: string, token?: string, body?: unknown): Promise<unknown> {
+async function request(path: 'login' | 'me' | 'logout', token?: string, body?: unknown): Promise<unknown> {
   const base = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (!base || !/^https?:\/\//.test(base)) throw new AuthError('El servicio no está disponible por el momento.');
   const controller = new AbortController();
@@ -36,38 +38,38 @@ async function request(path: string, token?: string, body?: unknown): Promise<un
       signal: controller.signal,
     });
     if (response.status === 401) {
-      throw new AuthError(path === 'login' ? 'El correo, usuario o contraseña no son correctos.' : 'Tu sesión terminó. Inicia sesión de nuevo.', 401);
+      throw new AuthError(path === 'login' ? 'El correo o la contraseña no son correctos.' : 'Tu sesión terminó. Inicia sesión de nuevo.', 401);
     }
-    if (response.status === 429) throw new AuthError('Has hecho varios intentos. Espera 15 minutos antes de volver a intentarlo.', 429);
-    if (!response.ok) throw new AuthError('No pudimos completar la solicitud. Inténtalo de nuevo más tarde.', response.status);
+    if (response.status === 429) throw new AuthError('Hiciste varios intentos seguidos. Espera 15 minutos y vuelve a intentarlo.', 429);
+    if (!response.ok) throw new AuthError('No pudimos completar la solicitud. Inténtalo de nuevo en unos minutos.', response.status);
     if (response.status === 204) return null;
     return await response.json() as unknown;
   } catch (error: unknown) {
     if (error instanceof AuthError) throw error;
-    throw new AuthError('No pudimos conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.');
+    throw new AuthError('No hay conexión con el servidor. Revisa tu internet y vuelve a intentarlo.');
   } finally { clearTimeout(timeout); }
 }
 
-export async function loginAccount(identifier: string, password: string) {
-  const result = await request('login', undefined, { identifier: identifier.trim().toLowerCase(), password });
+export async function loginStaff(email: string, password: string) {
+  const result = await request('login', undefined, { email: email.trim().toLowerCase(), password });
   if (typeof result !== 'object' || result === null || !('token' in result)
     || typeof result.token !== 'string' || !/^[a-f0-9]{64}$/.test(result.token)
-    || !('user' in result) || !isAccount(result.user)) {
+    || !('staff' in result) || !isStaff(result.staff)) {
     throw new AuthError('No pudimos confirmar el inicio de sesión. Inténtalo de nuevo.');
   }
-  return { token: result.token, user: result.user };
+  return { token: result.token, staff: result.staff };
 }
 
-export async function currentAccount(token: string): Promise<Account> {
+export async function currentStaff(token: string): Promise<Staff> {
   const result = await request('me', token);
-  if (typeof result !== 'object' || result === null || !('user' in result) || !isAccount(result.user)) {
+  if (typeof result !== 'object' || result === null || !('staff' in result) || !isStaff(result.staff)) {
     throw new AuthError('No pudimos cargar los datos de tu cuenta. Inténtalo de nuevo.');
   }
-  return result.user;
+  return result.staff;
 }
 
-export async function logoutAccount(token: string): Promise<void> { await request('logout', token); }
+export async function logoutStaff(token: string): Promise<void> { await request('logout', token); }
 
 export function authMessage(error: unknown): string {
-  return error instanceof AuthError ? error.message : 'No pudimos guardar los cambios de sesión en este dispositivo. Inténtalo de nuevo.';
+  return error instanceof AuthError ? error.message : 'No pudimos guardar la sesión en este teléfono. Inténtalo de nuevo.';
 }

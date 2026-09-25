@@ -1,7 +1,7 @@
 appId: com.voluntapp.app
-name: Login exitoso de una cuenta registrada
+name: Login exitoso de una cuenta de personal
 # Requiere el backend encendido y las credenciales de una cuenta real:
-# maestro test -e TEST_EMAIL=... -e TEST_PASSWORD=... .maestro/login_success.yaml
+# maestro test -e TEST_EMAIL=admin@bamx.test -e TEST_PASSWORD=... .maestro/login_success.yaml
 ---
 - launchApp:
     clearState: true
@@ -20,17 +20,11 @@ name: Login exitoso de una cuenta registrada
       - tapOn: ".*:8081.*"
 
 # Descargar el bundle y restaurar la sesión (vacía tras clearState) tarda,
-# así que la pantalla de bienvenida puede aparecer con retraso.
+# así que la pantalla de login puede aparecer con retraso.
 - extendedWaitUntil:
     visible:
-      id: "login-navigation-button"
+      id: "login-email-input"
     timeout: 90000
-
-- tapOn:
-    id: "login-navigation-button"
-
-- assertVisible:
-    id: "login-email-input"
 
 - tapOn:
     id: "login-email-input"

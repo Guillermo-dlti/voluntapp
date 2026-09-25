@@ -60,6 +60,36 @@ decision like the "no test runner" choice below.
   the team's size and timeline, not a gap to fill later. Verify by running
   the app and walking the real flow: register → view shifts → sign up →
   check in → see hours update.
+  *v2 note:* this was the v1 rule and v1 flow. The v2 flow to walk is the MVP
+  demo flow in `scope.md`. v2 feature 8 (Hardening) needs automated tests
+  where each role tries forbidden actions, so this rule gets revisited there.
+
+## Language
+
+- **UI text in Spanish (es-MX).** Every label, button, empty state, and error
+  message staff see is in Mexican Spanish. Use `usted`/neutral phrasing
+  consistently once the team picks one; don't mix.
+- **Code, comments, and commits in English.** Identifiers, file names,
+  comments, commit messages, and PR descriptions.
+
+## Comments
+
+- **Say what and why.** When a comment is worth writing (see "Comments explain
+  the non-obvious" above), it says what the code does *and* why it does it that
+  way. Example: "Conditional update instead of read-then-write, so two
+  coordinators assigning the last spot at the same time can't both succeed."
+
+## Git workflow
+
+- **Conventional commits.** `type: short summary` in the imperative, English:
+  `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`. Add a scope when it
+  helps (`feat(volunteers): add deactivate endpoint`). Small, logical commits.
+- **One feature per branch**, named `feature/<name>` (for example
+  `feature/staff-auth`); bug fixes use `fix/<name>`, docs-only changes
+  `docs/<name>`. Never commit directly to `main`.
+- **PR review before merging.** Every branch goes into `main` through a pull
+  request that another team member reviews, and the reviewer confirms the
+  main flow still works. Nobody merges their own unreviewed PR.
 
 ## When a rule and the code disagree
 

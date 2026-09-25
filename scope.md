@@ -1,267 +1,169 @@
-# Scope: Volunt-App
+# Scope: Volunt-App v2
 
-A mobile app for BAMX volunteers to register, browse and sign up for shifts,
-check in to activities, and track their hours — with a parallel admin side
-for BAMX staff to manage activities, registrations, attendance, and hours.
+An Android admin app for BAMX staff (admin, coordinator, supervisor). Staff
+manage volunteers, activities and shifts, assignments, attendance, hours,
+history, and reports. Volunteers are records, not accounts. Same stack as v1
+(Expo SDK 57 + Express + MongoDB Atlas, see
+`docs/specs/0001-v2-android-admin-stack.md`). Security rules, permissions,
+data model, and business rules live in `AGENTS.md`.
 
-Build it in a thin, working slice first — one volunteer registering, logging
-in, and seeing the home screen — before making any single part fuller. Then
-thicken it piece by piece.
+Build approach: a thin working slice first (staff logs in on Android and sees
+one real screen backed by Atlas), then thicken one feature at a time, in the
+order below.
 
-## Stack
+## MVP demo flow
 
-Expo SDK 57, Expo Router (file-based, `src/app` as root), TypeScript (strict),
-React Native 0.86, React 19.2, `NativeTabs` for the bottom tab bar.
+The one path the MVP has to walk end to end:
 
-Backend: Node.js + TypeScript API in `server/`, MongoDB Atlas (`voluntapp`).
-Registration uses email/password; passwords are stored as Argon2id hashes.
-
-**Not yet decided** (real open questions carried over from Stage 1):
-- Session method decided: opaque 256-bit bearer tokens, SHA-256 hashes in users.sessions,
-  30-day expiry, at most 5 sessions per user; native token storage via Expo SecureStore.
-- Notification/reminder system
-- Whether volunteers self-enter hours or only BAMX validates them
-
-## Roles
-
-| Role | Can do |
-|---|---|
-| Volunteer | Register, view shifts, sign up, check in, view own hours/history, edit own profile |
-| BAMX Administrator | Create/edit activities, review registrations, validate attendance and hours |
-| Technical Administrator | Environment config, database, permissions, backups |
-
-## Data model
-
-| Entity | Key fields | Relationship |
-|---|---|---|
-| Volunteer | id, name, email, phone, status | has many Registrations, Attendance, Hours |
-| Activity/Shift | id, name, description, date, time, location, capacity, status | has many Registrations |
-| Registration | id, volunteer, activity, date, status | links Volunteer ↔ Activity |
-| Attendance | id, registration, status, check-in time | belongs to a Registration |
-| Hours | id, volunteer, activity, amount, validation status | generated from validated Attendance |
-
-The first persisted entity is `users`. A Volunteer is a user with role
-`volunteer`; administrators share this collection. Fields: `_id` (ObjectId),
-`name`, `username`, `email`, `passwordHash`, `role`, optional `phone`, `status`,
-`createdAt`, `updatedAt` (BSON dates). Email and username are trimmed,
-lowercased, and each has a unique index. Roles: `volunteer`, `bamx_admin`,
-`technical_admin`. Status: `active` or `inactive`. Public registration always
-sets `volunteer` and `active`; clients cannot supply role/status/hash/dates.
-Passwords are 15–128 characters; usernames are 3–30 ASCII letters, digits,
-underscores or periods. Phone, when provided, is an international number
-starting with `+` and containing 8–15 digits. No user-list endpoint is public.
+1. Staff logs in
+2. Dashboard
+3. Creates a volunteer
+4. Creates an activity
+5. Assigns volunteers
+6. Records attendance and hours
+7. Finalizes
+8. The volunteer's history and total hours update
+9. Exports a report (CSV)
 
 ## At a glance
 
-| # | Feature | Phase | Status |
-|---|---|---|---|
-| 1 | Navigation & app shell | Foundation | done |
-| 2 | Coding standards & tooling | Foundation | not started |
-| 3 | Backend & data model | Foundation | in progress (users API) |
-| 4 | Design & look | Foundation | in progress |
-| 5 | Onboarding: Welcome, Login, Sign Up | Slice 1 | registration/login connected |
-| 6 | Home Hub | Slice 1 | done (mock) |
-| 7 | Oportunidades: list, details, register, confirmation | Slice 1 | done (mock) |
-| 8 | Mis Actividades: upcoming/past, cancellation | Slice 2 | done (mock) |
-| 9 | Attendance / Check-In | Slice 2 | done (mock) |
-| 10 | Mi Impacto (hours, services, kg) | Slice 2 | done (mock) |
-| 11 | Perfil: view/edit, logout | Slice 2 | real view/logout; editing pending |
-| 12 | Admin module | Slice 3 | not started |
+| # | Feature | Status |
+|---|---|---|
+| 0 | Stack decision + foundation | stack decided; foundation next |
+| 1 | Staff auth & roles | not started (v1 auth code largely reusable) |
+| 2 | Volunteers | not started |
+| 3 | Activities & assignments | not started |
+| 4 | Attendance & hours | not started |
+| 5 | Dashboard | not started |
+| 6 | Reports + CSV export | not started |
+| 7 | Staff management + audit log viewer | not started |
+| 8 | Hardening | not started |
 
-## Foundation
+## 0. Stack decision + foundation
 
-### 1. Navigation & app shell
+Same app, same stack; lay the ground every later feature stands on.
 
-`src/app` already exists with Expo Router picking it up correctly (confirmed:
-"Using src/app as the root directory for Expo Router"). Still the default
-template — `index.tsx`/`explore.tsx` and a 2-tab bar need replacing with the
-real 5-tab structure (Inicio, Ofertas, Mis Act., Impacto, Perfil) matching the
-Figma prototype, plus an auth stack (Welcome → Login/Sign Up) in front of it.
+- [x] Decide the stack: same Expo Android app + Express + MongoDB (spec 0001)
+- [ ] Tag the last v1 commit `v1`
+- [ ] Move the v1 volunteer screens out of `src/app` (needs team approval first; nothing deleted)
+- [ ] Restore a committed `.env.example` (names only) and remove it from `.gitignore`
+- [ ] Server: one startup step that creates every v2 collection with its `$jsonSchema` validator and indexes
+- [ ] Server: shared audit log writer (insert only) and a logger that never prints personal data
+- [ ] Server: `permissions.ts` with the role table from `AGENTS.md`
+- [ ] App: admin tab shell (Inicio, Voluntarios, Actividades, Reportes, Ajustes) with placeholder screens
+- [ ] Design tokens: BAMX colors and the Outfit/Geist fonts in `src/constants/theme.ts`
+- [ ] Add a root `typecheck` script covering app and server
+- [ ] Verify: app builds on the Android emulator, `/health` passes against Atlas, the v2 collections and indexes show up in Atlas
 
-- [x] Confirm Expo Router picks up `src/app`
-- [ ] Decide route-group structure (auth stack vs. tabs)
-- [ ] Build the tab bar with real 5 tabs
-- [ ] Build the auth stack shell (empty screens OK for now)
+## 1. Staff auth & roles
 
-### 2. Coding standards & tooling
+- [x] Decide what each role may do (permission table in `AGENTS.md`, first draft)
+- [ ] `staff_users` collection; seed script for local staff accounts (`admin@bamx.test`, `coordinador@bamx.test`, `supervisor@bamx.test`), password read from `.env`, never from source
+- [ ] Staff login / logout / me endpoints: argon2id, hashed opaque tokens, rate limited login (adapted from v1 `server/src/auth.ts`)
+- [ ] Middleware: require an active staff session and a permission on every route; deactivation revokes sessions
+- [ ] Decide whether to switch off v1's public `POST /api/auth/register`
+- [ ] App: staff login screen, SecureStore session (reuse v1 `auth-provider`), tabs hidden by role
+- [ ] Verify: each role logs in; an inactive account can't; no session → 401, wrong role → 403
 
-- [ ] Decide on Prettier + ESLint config
-- [ ] Add `typecheck`/`format` scripts to `package.json`
-- [ ] Decide whether to add a pre-commit hook (Husky + lint-staged) given 4 people committing to one repo
+## 2. Volunteers
 
-### 3. Backend & data model
+- [ ] Create and edit volunteers (validated in the UI and on the server)
+- [ ] List with search (name, email, phone) and filter (status)
+- [ ] Deactivate and reactivate (no delete)
+- [ ] Detail page: activity history plus total hours derived from finalized attendance
+- [ ] Every change written to `audit_log`
 
-- [x] Decide the backend (Node.js/TypeScript API + MongoDB Atlas)
-- [x] Decide the auth method (opaque revocable sessions + Expo SecureStore)
-- [ ] Implement the Volunteer/Activity/Registration/Attendance/Hours schema
-- [ ] Decide whether volunteers self-report hours or only admins validate
+## 3. Activities & assignments
 
-Users registration API (implemented).
+- [ ] Create and edit activities; status changes draft → open → closed, or cancelled
+- [ ] Assign volunteers, only to `open` activities and only if the volunteer is `active`
+- [ ] Capacity enforced atomically (transaction or conditional update), with no race condition
+- [ ] Block overlapping assignments for the same volunteer
+- [ ] Cancel an assignment (no delete)
+- [ ] Every change written to `audit_log`
 
-- [x] Create isolated server package and environment configuration
-- [x] Implement users model and unique email/username indexes
-- [x] Implement validated registration with Argon2id and fixed volunteer role
-- [x] Document startup and manual API verification
-- [x] Verify TypeScript and manual HTTP requests
-- [x] Verify registration persistence against Atlas
-Mobile registration build:
+## 4. Attendance & hours
 
-- [x] Add API client with timeout and safe error messages
-- [x] Add username, field validation, loading and success states to registration
-- [x] Configure public API URL and document emulator startup
-- [x] Verify types and registration through the client against Atlas
-- [x] Walk the real registration flow in Android (user confirmed persistence in Atlas)
+- [ ] Mark present / absent / late with check-in and check-out times
+- [ ] Enter hours, never more than the activity's duration
+- [ ] Finalize an activity's attendance
+- [ ] Admin only correction of finalized attendance, written to `audit_log`
+- [ ] Totals always derived from finalized attendance
 
-Mobile verification: Expo and server typechecks pass; iOS export succeeds.
-The actual client function was exercised against the API and Atlas: successful
-registration/persistence, duplicate handling, validation and offline messaging
-pass. The temporary account was removed. Registration was subsequently confirmed by the user in Android.
+## 5. Dashboard
 
-Verification: server build/typecheck and Expo typecheck pass. Manual HTTP
-checks with a substituted in-memory collection cover successful registration,
-normalization, hash verification/salting, response privacy, duplicate-error
-handling, invalid input, forbidden role/status, malformed/oversized JSON,
-missing routes and rate limiting. Real Atlas verification also passes: HTTP 201 registration, persisted volunteer
-role/status, Argon2id verification, and HTTP 409 for duplicate normalized email
-and username. The temporary verification account was removed afterward.
-`expo lint` could not complete because ESLint was not configured; its automatic
-dependency/config changes were reverted. No test runner was added.
+- [ ] KPIs (active volunteers, activities this month, hours this month; exact list confirmed when this feature starts)
+- [ ] Upcoming activities
+- [ ] Activities pending attendance finalization
 
-### 4. Design & look
+## 6. Reports + CSV export
 
-Figma prototype exists (green BAMX branding, per the mockups). Not yet
-translated into actual design tokens/theme constants.
+- [ ] Hours per volunteer, attendance per activity, participation by date range
+- [ ] CSV export generated on the server, respecting the caller's role, and written to `audit_log`
+- [ ] Android: download the CSV and open the share sheet (pick the file/sharing library here)
+- [ ] Guard against CSV formula injection (cells starting with `=`, `+`, `-`, `@`)
 
-- [ ] Pull colors/spacing from Figma into `src/constants/theme.ts`
-- [ ] Confirm accessibility baseline (contrast, focus states) per team's own Stage 1 objectives
+## 7. Staff management + audit log viewer
 
-## Slice 1: Onboarding + core browse/register loop
+- [ ] Admin creates, edits, deactivates staff and changes roles
+- [ ] Audit log viewer (admin only), filterable by actor, collection, and date
 
-### 5. Onboarding: Welcome, Login, Sign Up
+## 8. Hardening
 
-Registration now submits name, username, email and password to the API and
-shows an account-created confirmation. It does not grant a session or open
-the tabs. Login now validates credentials and restores a persisted native session.
+- [ ] Pick a test tool for the API (this reverses v1's "no test runner" choice); Maestro stays for the Android MVP flow
+- [ ] Maestro flow for the whole MVP demo flow
+- [ ] Seed ~30 volunteers and 8 activities with realistic Guadalajara/Zapopan data (past, current, future; some finalized) for the demo
+- [ ] Tests where each role tries every forbidden action and gets 401/403
+- [ ] Tests for the business rules: capacity race, overlap, assigning a closed activity or an inactive volunteer, hours over the duration, a non-admin editing finalized attendance
+- [ ] Check that no endpoint hard deletes and none returns `passwordHash`
+- [ ] Review the logs for personal data
 
-- [x] Decide the approach
-- [x] Build it (hardcoded flow complete)
+## v1 code (kept, not deleted)
 
-### 6. Home Hub
+v1 was the same Expo SDK 57 app aimed at volunteers. None of it is deleted.
 
-Summary of next registered activity, featured/available opportunities, nav to
-Opportunities/My Activities/Impact/Profile.
+**Reusable in v2**
 
-- [x] Decide the approach
-- [x] Build it (hardcoded flow complete)
+- The app itself: Expo Router setup, `NativeTabs` shell, dev build config,
+  fonts (Outfit headings, Geist body), `src/components` (`form-field`,
+  `back-button`, themed text/view), and the Android + Maestro setup.
+- Session handling on the device: `src/services/session-storage.ts`
+  (SecureStore), `src/providers/auth-provider.tsx` (restore on launch,
+  revalidate on resume), `src/services/auth.ts` (API client with timeout and
+  safe error messages). They switch from volunteer `users` to `staff_users`.
+- `server/` foundation: Express 5 + helmet + `no-store` + JSON size limit +
+  rate limiting + zod + argon2id, the Atlas connection
+  (`server/src/database.ts`), environment validation (`server/src/config.ts`),
+  and the plain Spanish error handler. Its login logic (dummy hash against
+  timing leaks, hashed tokens, max five sessions) is the base for staff auth.
+- Brand colors: the greens and neutrals hardcoded across the screens.
+  `src/constants/theme.ts` is still the Expo template, so the tokens still
+  have to be pulled out.
+- `.maestro/login_success.yaml`: the pattern for v2 flows.
 
-### 7. Oportunidades: list, details, register, confirmation
+**v1 only (parked)**
 
-List of available shifts → tap for full details (name, description, date,
-time, location, requirements, spots) → Register → confirmation screen. On
-success, activity appears in Mis Actividades.
+- Volunteer screens in `src/app`: welcome, sign-up, and the tabs Ofertas,
+  Mis Actividades (with QR check-in), Impacto, plus the volunteer Inicio and
+  Perfil. Most run on `src/constants/mock-data.ts`. The admin tabs replace
+  them; they move out of `src/app` (Expo Router would otherwise still route
+  them) only after the team approves.
+- Public volunteer self-registration `POST /api/auth/register` and the
+  `users` collection with the `volunteer` role. Volunteers don't log in in
+  v2, so feature 1 decides whether to switch the endpoint off.
 
-- [x] Decide the approach
-- [x] Build it (hardcoded flow complete)
+## Future / backlog (v1 volunteer features)
 
-## Slice 2: Ongoing participation
+Not in the v2 MVP. Kept here so the ideas aren't lost.
 
-### 8. Mis Actividades
-
-Upcoming/Pasadas tabs, tap to review details again, cancellation if BAMX
-policy allows (before a deadline).
-
-- [x] Decide the approach
-- [x] Build it (hardcoded flow complete)
-
-### 9. Attendance / Check-In
-
-Per the mockup, this is QR-code based: volunteer opens Check-In on a
-registered activity, the app shows a QR code volunteer presents on arrival to
-have it scanned. Confirming attendance is what eventually generates hours.
-
-- [x] Decide how the QR is generated/validated (needs a backend decision first)
-- [x] Build it (hardcoded flow complete)
-
-### 10. Mi Impacto
-
-Total accumulated hours, number of completed activities/services, kg
-distributed, contribution history.
-
-- [x] Decide the approach
-- [x] Build it (hardcoded flow complete)
-
-### 11. Perfil
-
-View/edit permitted personal info, log out.
-
-- [x] Decide the approach
-- [x] Build it (hardcoded flow complete)
-
-## Slice 3: Admin side
-
-### 12. Admin module
-
-Per the Technical/Admin Manual: create/edit/publish activities without
-deleting history on cancellation; view registrations and process
-cancellations without exceeding capacity; confirm attendance and
-validate/record hours; view (not download/share) volunteer info.
-
-- [ ] Decide the approach
-- [ ] Build it
+- Volunteer self sign-up (built in v1, see above)
+- Volunteers browsing and signing up for shifts (mock in v1)
+- QR check-in (mock in v1)
+- Notifications and reminders (never built)
+- Volunteer impact screen: hours, services, kg distributed (mock in v1)
+- Volunteer profile editing, password recovery
 
 ## Not doing right now
 
-- Production deployment, password recovery and persistent web sessions (local setup is in `server/README.md`)
-- Push notifications / reminders (open question, not committed to for MVP)
-- Admin backups/maintenance tooling beyond what the chosen backend provides out of the box
-
-Android connectivity follow-up: emulator-5554 is now available. Backend
-health and Metro status both pass. ADB reverse for ports 3000 and 8081
-was configured and Expo Go reopened through exp://127.0.0.1:8081; the
-welcome screen rendered. The user subsequently confirmed registration in Atlas.
-
-## Current build: login and personal profile
-
-Sessions are embedded in `users` (no new collection): `tokenHash`, `createdAt`,
-`expiresAt`. Only the random raw token goes to the client. Every protected
-request checks expiry and active user status; logout removes the session.
-Profile responses explicitly select public account fields.
-
-- [x] Implement rate-limited login by username/email, current-user and logout endpoints
-- [x] Persist native session securely, restore on launch and handle expired/offline sessions
-- [x] Protect the tabs and connect login/registration success navigation
-- [x] Show real account fields in Profile and real name on Home
-- [x] Verify API isolation, expiry, revocation, invalid login and existing registration
-- [x] Verify Android login, profile, restart persistence and logout
-
-Login verification: server build and both typechecks pass. Manual API checks
-against Atlas pass for registration, email/username login, wrong credentials,
-invalid payload, own-profile isolation, safe response fields, hashed tokens,
-expiry, inactive accounts, logout revocation and five-session cap. Android
-Expo Go walkthrough passes: login, real profile/name, process restart with
-SecureStore restoration, logout back to welcome, and protected profile deep
-link after logout. Confirmed session deletion in Atlas; temporary accounts
-were removed. Production transport requires HTTPS. No test runner added.
-
-## Current build: automated login flow with Maestro
-
-Flows live in `.maestro/`, one file per acceptance criterion, named
-`<caso>_<resultado>.yaml`. Maestro drives the real app against the real API —
-no mocks, no test runner, no extra framework. Credentials come in through
-`-e TEST_EMAIL` / `-e TEST_PASSWORD`; the repository never holds real ones.
-Flows select elements by `testID`, never by coordinates, so copy changes don't
-break them.
-
-- [x] Add stable `testID`s to the login path: welcome button, both login
-      fields, submit button, Home container and greeting, Perfil container and
-      its account section
-- [x] Write `.maestro/login_success.yaml` (clean state → welcome → login →
-      credentials → Home → Perfil tab) with waits instead of fixed sleeps
-- [x] Skip the expo-dev-client launcher when `clearState` wipes the saved Metro
-      server, without hardcoding anyone's LAN address
-- [x] Document the required `.env` keys, including the Android emulator API URL
-- [x] Run the flow on the emulator against the real backend (passes)
-
-The Perfil tab is the one element selected by visible text: `NativeTabs.Trigger`
-takes no `testID` or accessibility props in SDK 57, and the bar is real OS
-chrome, so its system label is the only stable handle.
+- Production deployment (HTTPS is required before anything is exposed publicly)
+- Backups and maintenance tooling beyond what Atlas provides

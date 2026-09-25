@@ -1,4 +1,5 @@
 import { MongoClient } from 'mongodb';
+import { ensureCollections } from './collections.js';
 import type { User } from './users.js';
 
 export async function connectDatabase(uri: string, databaseName: string) {
@@ -12,6 +13,8 @@ export async function connectDatabase(uri: string, databaseName: string) {
     await client.connect();
     const database = client.db(databaseName);
     await database.command({ ping: 1 });
+    await ensureCollections(database);
+    // v1 volunteer accounts; still used by the current login until staff auth replaces it.
     const users = database.collection<User>('users');
     await users.createIndexes([
       { key: { email: 1 }, name: 'users_email_unique', unique: true },

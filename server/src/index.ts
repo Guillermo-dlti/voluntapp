@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { connectDatabase } from './database.js';
+import { log } from './logger.js';
 
 async function start() {
   let config: ReturnType<typeof loadConfig>;
@@ -14,7 +15,10 @@ async function start() {
   let connection: Awaited<ReturnType<typeof connectDatabase>>;
   try {
     connection = await connectDatabase(config.MONGODB_URI, config.MONGODB_DB);
-  } catch {
+  } catch (error: unknown) {
+    // Only the numeric code: Mongo messages can quote document values (e.g. a duplicate email).
+    const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'number' ? error.code : null;
+    log.error('database_setup_failed', { code });
     console.error('No se pudo preparar MongoDB. Revisa la conexión, los permisos del usuario, la IP permitida en Atlas y que users no contenga correos o usuarios duplicados.');
     process.exitCode = 1;
     return;

@@ -29,8 +29,8 @@ The one path the MVP has to walk end to end:
 
 | # | Feature | Status |
 |---|---|---|
-| 0 | Stack decision + foundation | built; waiting on your review |
-| 1 | Staff auth & roles | not started (v1 auth code largely reusable) |
+| 0 | Stack decision + foundation | done |
+| 1 | Staff auth & roles | built; waiting on review (spec 0002) |
 | 2 | Volunteers | not started |
 | 3 | Activities & assignments | not started |
 | 4 | Attendance & hours | not started |
@@ -65,12 +65,17 @@ feature 1.
 ## 1. Staff auth & roles
 
 - [x] Decide what each role may do (permission table in `AGENTS.md`, first draft)
-- [ ] `staff_users` collection; seed script for local staff accounts (`admin@bamx.test`, `coordinador@bamx.test`, `supervisor@bamx.test`), password read from `.env`, never from source
-- [ ] Staff login / logout / me endpoints: argon2id, hashed opaque tokens, rate limited login (adapted from v1 `server/src/auth.ts`)
-- [ ] Middleware: require an active staff session and a permission on every route; deactivation revokes sessions
-- [ ] Decide whether to switch off v1's public `POST /api/auth/register`
-- [ ] App: staff login screen, SecureStore session (reuse v1 `auth-provider`), tabs hidden by role
-- [ ] Verify: each role logs in; an inactive account can't; no session → 401, wrong role → 403
+- [x] Seed script for local staff accounts (`npm run server:seed`), password from `SEED_STAFF_PASSWORD` in `.env`, never from source
+- [x] Staff login / logout / me endpoints: argon2id, hashed opaque tokens, 12 h sessions, max five, rate limited login, logins/logouts audit logged (`server/src/auth.ts`)
+- [x] Middleware `requireStaff()`: active staff session plus a capability on every route; inactive accounts count as signed out (`server/src/session.ts`)
+- [x] Switch off v1's public `POST /api/auth/register` (now 404); welcome and sign-up screens removed
+- [x] App: staff login screen, SecureStore session, Reportes hidden from supervisors, admin section of Ajustes only for admins
+- [x] UI polish: palette from the BAMX logo, shared Button/grouped list/EmptyState/Screen/Icon components, dashboard header with date and greeting (rules in `AGENTS.md` → Design)
+- [x] Verify: 18 API checks against Atlas pass (each role logs in; wrong/unknown/inactive → same 401; no session → 401; supervisor → reports capability 403; 12 h expiry; five-session cap; logout revokes; audit entries without hashes; register 404); on the emulator the old v1 session is rejected, supervisor sees 4 tabs, admin sees 5 tabs and the admin section, logout returns to login
+
+Revoking sessions when an admin deactivates someone is part of feature 7
+(staff management); until then an inactive account is already refused on its
+next request.
 
 ## 2. Volunteers
 

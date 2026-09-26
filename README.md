@@ -1,11 +1,9 @@
 # Welcome to your Expo app 👋
 
-El backend de usuarios está en `server/`. Consulta la
-[guía de configuración de MongoDB, inicio y registro](server/README.md).
-Desde la raíz: `npm --prefix server ci` y `npm run server:dev`.
-Registro y login usan la API; Perfil muestra la cuenta autenticada. Las
-actividades y horas siguen simuladas. Para probar en iOS, inicia el
-backend y ejecuta `npm run ios` en otra terminal.
+App de Android para que el personal de BAMX administre voluntarios,
+actividades, asistencia y horas. Primero lee `AGENTS.md` y `scope.md`.
+Configuración, cuentas de prueba y cómo correrlo en Android:
+[server/README.md](server/README.md).
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 

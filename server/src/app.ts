@@ -1,14 +1,12 @@
 import express from 'express';
-import { authRouter } from './auth.js';
 import type { NextFunction, Request, Response } from 'express';
-import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
-import { MongoServerError } from 'mongodb';
-import type { Collection, Db } from 'mongodb';
-import { fieldMessages, registerUser, registrationSchema } from './users.js';
-import type { Registration, User } from './users.js';
+import type { Db } from 'mongodb';
+import { authRouter } from './auth.js';
+import type { V2Collections } from './collections.js';
+import { log } from './logger.js';
 
-export function createApp(database: Db, users: Collection<User>) {
+export function createApp(database: Db, collections: V2Collections) {
   const app = express();
   app.disable('x-powered-by');
   app.use(helmet());
@@ -26,51 +24,8 @@ export function createApp(database: Db, users: Collection<User>) {
     }
   });
 
-  app.use('/api/auth/register', rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 10,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    message: { message: 'Has hecho varios intentos. Espera 15 minutos antes de volver a intentarlo.' },
-  }));
   app.use(express.json({ limit: '16kb' }));
-
-  app.post('/api/auth/register', async (
-    request: Request<Record<string, never>, unknown, unknown>, response,
-  ) => {
-    if (!request.is('application/json')) {
-      response.status(415).json({ message: 'Envía los datos en formato JSON.' });
-      return;
-    }
-    const result = registrationSchema.safeParse(request.body);
-    if (!result.success) {
-      const fields: Partial<Record<keyof Registration, string>> = {};
-      for (const issue of result.error.issues) {
-        const field = issue.path[0];
-        if (typeof field === 'string' && Object.hasOwn(fieldMessages, field)) {
-          const key = field as keyof Registration;
-          fields[key] = fieldMessages[key];
-        }
-      }
-      response.status(400).json({
-        message: 'Revisa los datos del registro y envía únicamente los campos permitidos.',
-        fields,
-      });
-      return;
-    }
-    try {
-      const user = await registerUser(users, result.data);
-      response.status(201).json({ message: 'Tu cuenta se creó correctamente.', user });
-    } catch (error: unknown) {
-      if (error instanceof MongoServerError && error.code === 11000) {
-        response.status(409).json({ message: 'No pudimos crear la cuenta con ese correo o nombre de usuario. Usa otros datos o inicia sesión si ya tienes una cuenta.' });
-        return;
-      }
-      response.status(503).json({ message: 'No pudimos crear tu cuenta. Inténtalo de nuevo más tarde.' });
-    }
-  });
-
-  app.use('/api/auth', authRouter(users));
+  app.use('/api/auth', authRouter(collections));
 
   app.use((_request, response) => {
     response.status(404).json({ message: 'No encontramos la ruta solicitada.' });
@@ -86,6 +41,7 @@ export function createApp(database: Db, users: Collection<User>) {
       response.status(400).json({ message: 'No pudimos leer los datos enviados. Revisa el formato JSON.' });
       return;
     }
+    log.error('unhandled_error');
     response.status(500).json({ message: 'Ocurrió un problema. Inténtalo de nuevo más tarde.' });
   });
   return app;

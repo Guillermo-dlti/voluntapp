@@ -93,7 +93,7 @@ Every document has `_id` (ObjectId), `createdAt`, `updatedAt` (BSON dates). Refe
 | `activities` | `name`, `description`, `location`, `startsAt`, `endsAt`, `capacity`, `requirements`, `status` (`draft` \| `open` \| `closed` \| `cancelled`), `supervisorId` (optional), `createdBy` | `endsAt > startsAt`, `capacity ≥ 1` |
 | `assignments` | `volunteerId`, `activityId`, `assignedBy`, `status` (`assigned` \| `cancelled`), `cancelledReason` | unique (`volunteerId`, `activityId`) |
 | `attendance` | `assignmentId`, `status` (`present` \| `absent` \| `late`), `checkInAt`, `checkOutAt`, `hours` (≥ 0, 2 decimals), `recordedBy`, `finalized` (default false), `finalizedAt`, `finalizedBy` | unique `assignmentId` |
-| `audit_log` | `actorId`, `action` (`insert` \| `update` \| `export`…), `collection`, `recordId`, `before`, `after`, `createdAt` | insert only |
+| `audit_log` | `actorId`, `action` (`insert` \| `update` \| `export` \| `login` \| `logout`), `collection`, `recordId`, `before`, `after`, `createdAt` | insert only |
 
 - `audit_log.before`/`after` are snapshots of the record. They never include `passwordHash` or `sessions`.
 - A volunteer's total hours and completed activity count are **computed** from finalized attendance (an aggregation), never stored.
@@ -111,6 +111,22 @@ Mongo has no triggers, so every write goes through shared service functions in `
 6. `hours` can't exceed the activity's duration; `checkOutAt` must be after `checkInAt`.
 7. Every change listed under "Audit log" above writes to `audit_log`.
 8. Cancelling an activity keeps its assignments and attendance.
+
+## Auth and route checks (built in feature 1, spec 0002)
+
+- `POST /api/auth/login` (email + password), `GET /api/auth/me`, `POST /api/auth/logout`. Sessions last 12 hours.
+- Every new route: `requireStaff(staffUsers, '<capability>')` from `server/src/session.ts`, plus `canOnActivity()` for supervisor "own activities" grants. Writes call `writeAudit()`; logs use `log` from `server/src/logger.ts`.
+- Local staff accounts come from `npm run server:seed` (`admin@`, `coordinador@`, `supervisor@bamx.test`, password `SEED_STAFF_PASSWORD`).
+
+## Design
+
+Aim: a real, calm operations app for food bank staff, not a template. Reuse the shared components before styling anything by hand.
+
+- **Tokens** live in `src/constants/theme.ts`: leaf green `primary` for actions, `forest` for header bands, `accent` (mango, from the BAMX logo) only for things that need attention, `background` light green-gray. No raw hex values in screens.
+- **Type:** Outfit for titles and numbers, Geist for body. Sentence case, no all-caps labels.
+- **Structure:** grouped lists (`Section` + `Row` in `src/components/grouped-list.tsx`) instead of a separate shadowed card per item; no drop shadows. Radius follows hierarchy (`Radius.sheet` > `card` > `button`/`input`).
+- **Screens:** tab screens use `Screen` (large left-aligned title). Empty lists use `EmptyState` and say what will appear and why it's empty. Icons via `Icon` (SF Symbols on iOS, Material Symbols on Android; no icon assets).
+- **Copy:** plain Spanish verbs; buttons say what happens ("Entrar", "Cerrar sesión"); errors say what went wrong and what to do.
 
 ## Screens (Android)
 

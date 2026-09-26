@@ -62,32 +62,43 @@ export const Spacing = {
 } as const;
 
 
-// Design tokens pulled directly from Figma via the Figma MCP connector
+// Brand palette. Leaf green comes from the team's Figma; forest and mango are drawn from the
+// BAMX logo so the app reads as the food bank's own tool, not a generic template.
 export const Brand = {
   primary: '#2E7D32',
-  primaryLight: '#E8F5E9',
-  text: '#0F172A',
-  textSecondary: '#475569',
-  border: '#CBD5E1',
-  divider: '#F1F5F9',
+  primaryPressed: '#256B29',
+  primaryLight: '#E6F2E7',
+  forest: '#183B24',
+  forestText: '#E4EFE6',
+  forestMuted: '#9DB8A3',
+  accent: '#E9A23B',
+  accentLight: '#FDF3E3',
+  accentText: '#8A5A12',
+  text: '#15211A',
+  textSecondary: '#5A6B60',
+  textTertiary: '#8A978E',
+  border: '#D5DDD7',
+  divider: '#E6EBE7',
   surface: '#FFFFFF',
-  surfaceMuted: '#F8FAFC',
-  background: '#FAFAFA',
-  // Status colors for errors, activity and attendance states.
-  danger: '#DC2626',
-  dangerText: '#B91C1C',
-  dangerBorder: '#EF4444',
-  dangerLight: '#FEF2F2',
+  surfaceMuted: '#EEF2EF',
+  background: '#F4F6F3',
+  danger: '#C0392B',
+  dangerText: '#A93226',
+  dangerBorder: '#E27D72',
+  dangerLight: '#FCEDEB',
   warning: '#B45309',
   warningLight: '#FFFBEB',
-  success: '#15803D',
-  successLight: '#F0FDF4',
+  success: '#2E7D32',
+  successLight: '#E6F2E7',
 } as const;
 
+// Radius follows hierarchy: sheets are softest, grouped sections next, controls tightest.
 export const Radius = {
+  sheet: 28,
   card: 16,
-  button: 6,
-  pill: 20,
+  button: 14,
+  input: 14,
+  pill: 999,
 } as const;
 
 export const AppFonts = {

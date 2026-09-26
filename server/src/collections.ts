@@ -80,7 +80,7 @@ export interface Attendance {
   updatedAt: Date;
 }
 
-export type AuditAction = 'insert' | 'update' | 'export';
+export type AuditAction = 'insert' | 'update' | 'export' | 'login' | 'logout';
 
 export interface AuditEntry {
   _id: ObjectId;
@@ -247,7 +247,7 @@ const definitions: CollectionDefinition[] = [
         required: ['actorId', 'action', 'collection', 'createdAt'],
         properties: {
           actorId: objectId,
-          action: { enum: ['insert', 'update', 'export'] },
+          action: { enum: ['insert', 'update', 'export', 'login', 'logout'] },
           collection: text(60),
           recordId: objectId,
           before: { bsonType: 'object' },

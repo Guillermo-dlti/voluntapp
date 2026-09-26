@@ -19,11 +19,11 @@ async function start() {
     // Only the numeric code: Mongo messages can quote document values (e.g. a duplicate email).
     const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'number' ? error.code : null;
     log.error('database_setup_failed', { code });
-    console.error('No se pudo preparar MongoDB. Revisa la conexión, los permisos del usuario, la IP permitida en Atlas y que users no contenga correos o usuarios duplicados.');
+    console.error('No se pudo preparar MongoDB. Revisa la conexión, los permisos del usuario, la IP permitida en Atlas y que no haya correos duplicados en staff_users o volunteers.');
     process.exitCode = 1;
     return;
   }
-  const app = createApp(connection.database, connection.users);
+  const app = createApp(connection.database, connection.collections);
   const server = app.listen(config.PORT, config.HOST, () => {
     console.log(`Backend disponible en http://${config.HOST}:${config.PORT}. MongoDB conectado.`);
   });

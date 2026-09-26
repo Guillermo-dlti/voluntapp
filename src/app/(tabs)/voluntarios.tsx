@@ -1,17 +1,14 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { EmptyState } from '@/components/empty-state';
+import { Screen } from '@/components/screen';
 
 export default function VolunteersScreen() {
   return (
-    <ScreenPlaceholder
-      testID="volunteers-screen"
-      title="Voluntarios"
-      subtitle="Registro y seguimiento de personas voluntarias"
-      upcoming={[
-        'Buscar por nombre, correo o teléfono y filtrar por estado',
-        'Registrar y editar voluntarios',
-        'Desactivar y reactivar (sin borrar su historial)',
-        'Detalle con historial de participación y horas acumuladas',
-      ]}
-    />
+    <Screen testID="volunteers-screen" title="Voluntarios" subtitle="Personas voluntarias registradas en BAMX">
+      <EmptyState
+        icon={{ ios: 'person.2', android: 'group' }}
+        title="Todavía no hay voluntarios"
+        body="Aquí vas a registrar a las personas voluntarias y consultar su historial y sus horas. Esta sección llega en la siguiente versión."
+      />
+    </Screen>
   );
 }

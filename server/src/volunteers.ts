@@ -1,8 +1,9 @@
 import { Router, type Response } from 'express';
-import { MongoServerError, ObjectId, type ClientSession, type Filter, type MongoClient } from 'mongodb';
+import { ObjectId, type Filter, type MongoClient } from 'mongodb';
 import { z } from 'zod';
 import { writeAudit } from './audit.js';
 import type { V2Collections, Volunteer } from './collections.js';
+import { inTransaction, isDuplicate, parseId, searchPattern, searchWords } from './common.js';
 import { log } from './logger.js';
 import { currentStaff, requireStaff } from './session.js';
 
@@ -83,14 +84,6 @@ function invalid(response: Response, error: z.ZodError) {
 const notFound = { message: 'No encontramos a ese voluntario. Puede que el enlace ya no sea válido.' };
 const duplicateEmail = { message: 'Ya hay un voluntario registrado con ese correo.', fields: { email: 'Este correo ya está registrado con otro voluntario.' } };
 
-function parseId(value: unknown): ObjectId | null {
-  return typeof value === 'string' && /^[a-f0-9]{24}$/i.test(value) ? new ObjectId(value) : null;
-}
-
-function isDuplicate(error: unknown): boolean {
-  return error instanceof MongoServerError && error.code === 11000;
-}
-
 // Explicit fields so nothing unexpected is ever sent to the app.
 function publicVolunteer(volunteer: Volunteer) {
   return {
@@ -109,18 +102,10 @@ function publicVolunteer(volunteer: Volunteer) {
   };
 }
 
-// Search should find "López" when staff type "lopez", so each vowel (and n) matches its accented forms.
-const accentClasses: Record<string, string> = { a: '[aáä]', e: '[eéë]', i: '[iíï]', o: '[oóö]', u: '[uúü]', n: '[nñ]' };
-function searchPattern(word: string): RegExp {
-  const escaped = word.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(escaped.replace(/[aeioun]/gi, (char) => accentClasses[char.toLowerCase()] ?? char), 'i');
-}
-
 function listFilter(q: string | undefined, status: 'active' | 'inactive' | 'all'): Filter<Volunteer> {
   const filter: Filter<Volunteer> = status === 'all' ? {} : { status };
-  const words = (q ?? '').split(/\s+/).filter(Boolean).slice(0, 5);
-  // Under 2 characters matches almost everyone, so it's treated as no search.
-  if (words.join('').length < 2) return filter;
+  const words = searchWords(q);
+  if (!words.length) return filter;
   // Every word has to match some field, so "ana lopez" finds Ana López.
   filter.$and = words.map((word) => {
     const pattern = searchPattern(word);
@@ -133,10 +118,7 @@ export function volunteersRouter(collections: V2Collections, client: MongoClient
   const { staffUsers, volunteers, assignments } = collections;
   const router = Router();
 
-  // A change and its audit entry commit together, or neither does.
-  function transaction<T>(work: (session: ClientSession) => Promise<T>): Promise<T> {
-    return client.withSession((session) => session.withTransaction(() => work(session)));
-  }
+  const transaction = <T>(work: Parameters<typeof inTransaction<T>>[1]) => inTransaction(client, work);
 
   router.get('/', requireStaff(staffUsers, 'volunteers.read'), async (request, response) => {
     const parsed = listSchema.safeParse(request.query);

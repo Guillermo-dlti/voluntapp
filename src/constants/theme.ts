@@ -91,6 +91,8 @@ export const Brand = {
   warningLight: '#FFFBEB',
   success: '#2E7D32',
   successLight: '#E6F2E7',
+  // Dims the screen behind a dialog.
+  scrim: 'rgba(21, 33, 26, 0.45)',
 } as const;
 
 // Radius follows hierarchy: sheets are softest, grouped sections next, controls tightest.

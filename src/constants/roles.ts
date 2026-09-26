@@ -10,6 +10,8 @@ export const roleLabels: Record<StaffRole, string> = {
 // check: showing something here never grants access, and hiding it never replaces the server check.
 export const roleCan = {
   editVolunteers: (role: StaffRole) => role !== 'supervisor',
+  editActivities: (role: StaffRole) => role !== 'supervisor',
+  assignVolunteers: (role: StaffRole) => role !== 'supervisor',
   viewReports: (role: StaffRole) => role !== 'supervisor',
   manageStaff: (role: StaffRole) => role === 'admin',
   viewAudit: (role: StaffRole) => role === 'admin',

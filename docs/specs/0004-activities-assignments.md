@@ -1,7 +1,7 @@
 # 0004. Activities and assignments: schedule, publish, assign, cancel
 
 **Date**: 2026-09-25
-**Status**: Proposed
+**Status**: In Progress
 
 ## Summary
 

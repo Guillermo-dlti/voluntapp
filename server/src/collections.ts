@@ -33,6 +33,8 @@ export interface Volunteer {
   emergencyContactPhone: string;
   status: 'active' | 'inactive';
   notes?: string;
+  // Internal: rewritten in every assignment transaction so two of them for the same person collide.
+  assignmentLock?: ObjectId;
   createdBy: ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +48,8 @@ export interface Activity {
   startsAt: Date;
   endsAt: Date;
   capacity: number;
+  // Number of `assigned` assignments; the capacity check runs against it atomically.
+  assignedCount: number;
   requirements?: string;
   status: 'draft' | 'open' | 'closed' | 'cancelled';
   supervisorId?: ObjectId;
@@ -61,6 +65,8 @@ export interface Assignment {
   assignedBy: ObjectId;
   status: 'assigned' | 'cancelled';
   cancelledReason?: string;
+  cancelledAt?: Date;
+  cancelledBy?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -153,6 +159,7 @@ const definitions: CollectionDefinition[] = [
           emergencyContactPhone: { bsonType: 'string', pattern: '^\\+[1-9][0-9]{7,14}$' },
           status: { enum: ['active', 'inactive'] },
           notes: text(1000, 0),
+          assignmentLock: objectId,
           createdBy: objectId,
           ...timestamps,
         },
@@ -169,14 +176,15 @@ const definitions: CollectionDefinition[] = [
     validator: {
       $jsonSchema: {
         bsonType: 'object',
-        required: ['name', 'location', 'startsAt', 'endsAt', 'capacity', 'status', 'createdBy', 'createdAt', 'updatedAt'],
+        required: ['name', 'location', 'startsAt', 'endsAt', 'capacity', 'assignedCount', 'status', 'createdBy', 'createdAt', 'updatedAt'],
         properties: {
           name: text(120, 3),
           description: text(2000, 0),
           location: text(200, 2),
           startsAt: date,
           endsAt: date,
-          capacity: { bsonType: 'int', minimum: 1, maximum: 10000 },
+          capacity: { bsonType: 'int', minimum: 1, maximum: 1000 },
+          assignedCount: { bsonType: 'int', minimum: 0 },
           requirements: text(1000, 0),
           status: { enum: ['draft', 'open', 'closed', 'cancelled'] },
           supervisorId: objectId,
@@ -184,7 +192,7 @@ const definitions: CollectionDefinition[] = [
           ...timestamps,
         },
       },
-      $expr: { $gt: ['$endsAt', '$startsAt'] },
+      $expr: { $and: [{ $gt: ['$endsAt', '$startsAt'] }, { $lte: ['$assignedCount', '$capacity'] }] },
     },
     indexes: [{ key: { status: 1, startsAt: 1 }, name: 'activities_status_starts' }],
   },
@@ -200,6 +208,8 @@ const definitions: CollectionDefinition[] = [
           assignedBy: objectId,
           status: { enum: ['assigned', 'cancelled'] },
           cancelledReason: text(500, 0),
+          cancelledAt: date,
+          cancelledBy: objectId,
           ...timestamps,
         },
       },
@@ -207,6 +217,7 @@ const definitions: CollectionDefinition[] = [
     indexes: [
       { key: { volunteerId: 1, activityId: 1 }, name: 'assignments_volunteer_activity_unique', unique: true },
       { key: { activityId: 1, status: 1 }, name: 'assignments_activity_status' },
+      { key: { volunteerId: 1, status: 1 }, name: 'assignments_volunteer_status' },
     ],
   },
   {

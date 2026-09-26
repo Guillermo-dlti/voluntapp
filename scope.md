@@ -32,7 +32,7 @@ The one path the MVP has to walk end to end:
 | 0 | Stack decision + foundation | done |
 | 1 | Staff auth & roles | done (spec 0002) |
 | 2 | Volunteers | done (spec 0003) |
-| 3 | Activities & assignments | in progress (spec 0004) |
+| 3 | Activities & assignments | in progress (spec 0004): built and verified, awaiting review |
 | 4 | Attendance & hours | not started |
 | 5 | Dashboard | not started |
 | 6 | Reports + CSV export | not started |
@@ -115,14 +115,24 @@ or late), which AGENTS.md lists as a computed value.
 Spec: [`docs/specs/0004-activities-assignments.md`](docs/specs/0004-activities-assignments.md) (decisions approved 2026-09-25). Branch: `feature/activities`.
 
 - [x] Design it (spec)
-- [ ] Build it: `/develop` activities & assignments
-  - [ ] Schema changes (`assignedCount`, `assignmentLock`, cancel fields, validator, index, capacity max 1000) (AC-1, AC-7)
-  - [ ] Create and list activities, API and app, end to end on the emulator (AC-1, AC-2, AC-12)
-  - [ ] Detail, status changes draft/open/closed/cancelled, edit, supervisor picker (AC-3, AC-4, AC-13, AC-14)
-  - [ ] Assign and cancel assignments: capacity counter, volunteer lock, overlap, reactivation; Participantes and Asignar screens (AC-5, AC-6, AC-8, AC-9, AC-11)
-  - [ ] Date edit overlap check naming who is affected (AC-10)
-- [ ] Verify it: API checks for every AC against Atlas (including parallel requests for capacity and overlap), then the flow on the Android emulator as coordinator and supervisor
-- [ ] Every change written to `audit_log` (checked as part of verify)
+- [x] Build it: `/develop` activities & assignments (code in `server/src/activities.ts`, `server/src/staff.ts`, `src/app/(tabs)/actividades/`)
+  - [x] Schema changes (`assignedCount`, `assignmentLock`, cancel fields, validator, index, capacity max 1000), live in Atlas (AC-1, AC-7)
+  - [x] Create and list activities, API and app (AC-1, AC-2, AC-12)
+  - [x] Detail, status changes draft/open/closed/cancelled, edit, supervisor picker (AC-3, AC-4, AC-13, AC-14)
+  - [x] Assign and cancel assignments: capacity counter, volunteer lock, overlap, reactivation; Participantes and Asignar screens (AC-5, AC-6, AC-8, AC-9, AC-11)
+  - [x] Date edit overlap check naming who is affected (AC-10)
+- [x] Verify it: API checks for every AC against Atlas (including parallel requests for capacity and overlap), then the flow on the Android emulator as coordinator and supervisor
+  - [x] 69 API checks against Atlas pass (every AC; 10 parallel assigns into capacity 3 give exactly 3; one volunteer into two overlapping activities in parallel gives exactly one; same pair and reactivation in parallel give one success and one 409, never a 500; `assignedCount` equals a recount on every test activity; no `assignmentLock` in any audit snapshot). Test records removed afterwards
+  - [x] Walk the flow on the Android emulator. As coordinator: field errors on an empty form; create (draft, Guadalajara time, supervisor); publish; search and assign two volunteers to a 2 place activity (picker marks "Ya asignado", count 2/2, "Cupo lleno"); cancel one with a reason (short reason refused), reassign (same record); overlap refusal naming the other activity; back to back allowed; a date edit refused naming the affected person. As supervisor: 4 tabs, list and detail read only (no create, edit, status, assign or cancel). Walk records removed afterwards
+- [x] Every change written to `audit_log` (checked in the API checks)
+
+Notes: the walk found the inline Compose pickers squashing in a half width column and making the
+form jump to the bottom when they opened or closed. `DateField` (also used by volunteers) and the new
+`TimeField` now open the native Material dialogs instead, with Spanish "Usar fecha"/"Usar hora" and
+"Cancelar" buttons; they only report a value on confirm, so the earlier "Usar fecha" workaround is gone.
+The calendar's own header still follows the phone's language. The form works in Guadalajara wall
+clock time (the spec said the device zone; same thing on BAMX phones, worth one line in spec 0004).
+An end time at or before the start means the activity ends the next day.
 
 ## 4. Attendance & hours
 

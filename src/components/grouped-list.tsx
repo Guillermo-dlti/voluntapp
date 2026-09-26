@@ -39,10 +39,12 @@ interface RowProps {
   destructive?: boolean;
   onPress?: () => void;
   disabled?: boolean;
+  // false for rows that are a choice (a radio), not a way to another screen.
+  chevron?: boolean;
   testID?: string;
 }
 
-export function Row({ label, value, note, icon, leading, trailing, destructive, onPress, disabled, testID }: RowProps) {
+export function Row({ label, value, note, icon, leading, trailing, destructive, onPress, disabled, chevron = true, testID }: RowProps) {
   const color = destructive ? Brand.danger : Brand.text;
   const content = (
     <>
@@ -57,7 +59,7 @@ export function Row({ label, value, note, icon, leading, trailing, destructive, 
       </View>
       {note ? <Text style={styles.note}>{note}</Text> : null}
       {trailing}
-      {onPress && !destructive ? <Icon name={{ ios: 'chevron.right', android: 'chevron_right' }} size={18} color={Brand.textTertiary} /> : null}
+      {onPress && !destructive && chevron ? <Icon name={{ ios: 'chevron.right', android: 'chevron_right' }} size={18} color={Brand.textTertiary} /> : null}
     </>
   );
   if (!onPress) return <View testID={testID} style={styles.row}>{content}</View>;

@@ -44,3 +44,52 @@ export function birthDateRange(now = new Date()): { min: string; max: string; st
   const max = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(yesterday);
   return { min: '1900-01-02', max, start: `${Number(max.slice(0, 4)) - 25}-01-01` };
 }
+
+const partsFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+});
+
+// A moment as Guadalajara wall clock parts: { date: 'YYYY-MM-DD', time: 'HH:MM' }.
+export function mexicoParts(moment: Date | string): { date: string; time: string } {
+  const parts = Object.fromEntries(partsFormat.formatToParts(new Date(moment)).map((part) => [part.type, part.value]));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+
+// The UTC moment for a Guadalajara date and time. Forms work in Guadalajara wall clock time so a
+// phone set to another zone still creates the shift staff meant; the offset is read from Intl twice,
+// which stays right even if daylight saving ever returns.
+export function mexicoMoment(date: string, time: string): Date {
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const wall = Date.UTC(year, month - 1, day, hour, minute);
+  const offsetAt = (instant: number) => {
+    const { date: d, time: t } = mexicoParts(new Date(instant));
+    const [y, mo, da] = d.split('-').map(Number);
+    const [h, mi] = t.split(':').map(Number);
+    return Date.UTC(y, mo - 1, da, h, mi) - instant;
+  };
+  let instant = wall - offsetAt(wall);
+  instant = wall - offsetAt(instant);
+  return new Date(instant);
+}
+
+// "9:00 a.m." for a HH:MM wall clock time.
+export function formatTime(time: string): string {
+  const [hour, minute] = time.split(':').map(Number);
+  return new Intl.DateTimeFormat('es-MX', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, 0, 1, hour, minute)));
+}
+
+// An activity's schedule in one line: "3 oct 2026 · 9:00 a.m. a 1:00 p.m.", with both dates when it
+// ends on another day.
+export function formatSchedule(startsAt: string, endsAt: string): string {
+  const start = mexicoParts(startsAt);
+  const end = mexicoParts(endsAt);
+  const day = (date: string) => new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+  if (start.date === end.date) return `${day(start.date)} · ${formatTime(start.time)} a ${formatTime(end.time)}`;
+  return `${day(start.date)}, ${formatTime(start.time)} a ${day(end.date)}, ${formatTime(end.time)}`;
+}
+
+// Today in Guadalajara as YYYY-MM-DD.
+export function todayInMexico(now = new Date()): string {
+  return mexicoParts(now).date;
+}

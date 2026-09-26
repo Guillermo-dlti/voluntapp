@@ -1,55 +1,48 @@
-import { DatePickerDialog, Host } from '@expo/ui/jetpack-compose';
+import { Host, TimePickerDialog } from '@expo/ui/jetpack-compose';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
-import { formatDate } from '@/utils/time';
+import { formatTime } from '@/utils/time';
 
-interface DateFieldProps {
+interface TimeFieldProps {
   label: string;
-  // YYYY-MM-DD, or '' for no date.
+  // HH:MM wall clock time, or '' for none.
   value: string;
   onChange: (value: string) => void;
   error?: string;
   hint?: string;
-  // Inclusive range the picker allows, as YYYY-MM-DD.
-  min: string;
-  max: string;
-  // Where the calendar opens when there is no value yet (for a birth date, some decades back).
+  // Where the dial opens when there is no value yet.
   start: string;
   testID?: string;
 }
 
-// A field that opens the native Material date picker dialog. Dates are whole days, so they travel
-// as YYYY-MM-DD and the picker's midnight-UTC value is cut to its date part. A dialog (instead of
-// an inline picker) keeps the form from jumping while it scrolls, and only reports on "Usar fecha".
-export function DateField({ label, value, onChange, error, hint, min, max, start, testID }: DateFieldProps) {
+const pad = (value: number) => String(value).padStart(2, '0');
+
+// The Material time picker dialog, like DateField's. The native picker reads and reports hours in
+// the phone's own zone, so both directions go through a local Date; only the hour and minute matter.
+export function TimeField({ label, value, onChange, error, hint, start, testID }: TimeFieldProps) {
   const [open, setOpen] = useState(false);
+  const [hour, minute] = (value || start).split(':').map(Number);
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={`${label}: ${value ? formatDate(value) : 'sin fecha'}`}
+      <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={`${label}: ${value ? formatTime(value) : 'sin hora'}`}
         accessibilityHint={error ?? hint} onPress={() => setOpen(true)}
         style={[styles.input, open && styles.focused, error ? styles.invalid : undefined]}>
-        <Icon name={{ ios: 'calendar', android: 'calendar_month' }} size={20} color={Brand.textSecondary} />
-        <Text style={[styles.value, !value && styles.placeholder]}>{value ? formatDate(value) : 'Sin fecha'}</Text>
-        {value ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Quitar fecha" hitSlop={10} onPress={() => { onChange(''); setOpen(false); }}>
-            <Icon name={{ ios: 'xmark.circle.fill', android: 'cancel' }} size={20} color={Brand.textTertiary} />
-          </Pressable>
-        ) : null}
+        <Icon name={{ ios: 'clock', android: 'schedule' }} size={20} color={Brand.textSecondary} />
+        <Text style={[styles.value, !value && styles.placeholder]}>{value ? formatTime(value) : 'Sin hora'}</Text>
       </Pressable>
       {open ? (
         <Host style={styles.dialogHost}>
-          <DatePickerDialog
-            variant="picker"
-            initialDate={`${value || start}T00:00:00.000Z`}
-            selectableDates={{ start: new Date(`${min}T00:00:00Z`), end: new Date(`${max}T00:00:00Z`) }}
+          <TimePickerDialog
+            is24Hour={false}
+            initialDate={new Date(2000, 0, 1, hour, minute).toISOString()}
             color={Brand.primary}
-            confirmButtonLabel="Usar fecha"
+            confirmButtonLabel="Usar hora"
             dismissButtonLabel="Cancelar"
-            onDateSelected={(date) => { onChange(date.toISOString().slice(0, 10)); setOpen(false); }}
+            onDateSelected={(date) => { onChange(`${pad(date.getHours())}:${pad(date.getMinutes())}`); setOpen(false); }}
             onDismissRequest={() => setOpen(false)}
           />
         </Host>

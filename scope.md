@@ -30,7 +30,7 @@ The one path the MVP has to walk end to end:
 | # | Feature | Status |
 |---|---|---|
 | 0 | Stack decision + foundation | done |
-| 1 | Staff auth & roles | built; waiting on review (spec 0002) |
+| 1 | Staff auth & roles | done (spec 0002) |
 | 2 | Volunteers | not started |
 | 3 | Activities & assignments | not started |
 | 4 | Attendance & hours | not started |

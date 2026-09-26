@@ -1,7 +1,7 @@
 # 0002. Staff authentication and role checks
 
 **Date**: 2026-09-25
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 

@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import type { Db } from 'mongodb';
 import { activitiesRouter } from './activities.js';
+import { attendanceRouter } from './attendance.js';
 import { authRouter } from './auth.js';
 import type { V2Collections } from './collections.js';
 import { log } from './logger.js';
@@ -31,6 +32,7 @@ export function createApp(database: Db, collections: V2Collections) {
   app.use('/api/auth', authRouter(collections));
   app.use('/api/volunteers', volunteersRouter(collections, database.client));
   app.use('/api/activities', activitiesRouter(collections, database.client));
+  app.use('/api/activities', attendanceRouter(collections, database.client));
   app.use('/api/staff', staffRouter(collections));
 
   app.use((_request, response) => {

@@ -32,8 +32,8 @@ The one path the MVP has to walk end to end:
 | 0 | Stack decision + foundation | done |
 | 1 | Staff auth & roles | done (spec 0002) |
 | 2 | Volunteers | done (spec 0003) |
-| 3 | Activities & assignments | in progress (spec 0004): built and verified, awaiting review |
-| 4 | Attendance & hours | not started |
+| 3 | Activities & assignments | done (spec 0004) |
+| 4 | Attendance & hours | done (spec 0005) |
 | 5 | Dashboard | not started |
 | 6 | Reports + CSV export | not started |
 | 7 | Staff management + audit log viewer | not started |
@@ -136,11 +136,23 @@ An end time at or before the start means the activity ends the next day.
 
 ## 4. Attendance & hours
 
-- [ ] Mark present / absent / late with check-in and check-out times
-- [ ] Enter hours, never more than the activity's duration
-- [ ] Finalize an activity's attendance
-- [ ] Admin only correction of finalized attendance, written to `audit_log`
-- [ ] Totals always derived from finalized attendance
+Spec: [`docs/specs/0005-attendance-hours.md`](docs/specs/0005-attendance-hours.md) (decisions approved 2026-09-25, cross checked). Branch: `feature/attendance`. Next after this: feature 6 (Reports), since every report number comes from finalized attendance.
+
+- [x] Design it (spec)
+- [x] Build it: `/develop` attendance & hours. Code in `server/src/attendance.ts`, `src/app/(tabs)/actividades/[id]/` (Asistencia section, `asistencia/[assignmentId].tsx`), `src/utils/attendance-rules.ts`
+  - [x] Schema fields and the record endpoint with the Asistencia section and record form on the phone (AC-1, AC-2, AC-3, AC-9)
+  - [x] Mark all present and finalize, closing the activity (AC-4, AC-5)
+  - [x] Admin correction with reason; assignment cancel blocked once attendance exists (AC-6, AC-7)
+  - [x] Supervisor own activity checks in the API and the app (AC-10)
+- [x] Verify it: API checks for every AC against Atlas (parallel requests for AC-8), then the flow on the Android emulator as coordinator, supervisor and admin (AC-1 to AC-10)
+  - [x] 67 API checks against Atlas (reported by the implementer), including three rounds of the four AC-8 races; temporary API test records and their audit entries were removed.
+  - [x] Android emulator: coordinator saw unrecorded rows, missing-name refusal, mark all, late with times, local field errors, attendance-based cancellation refusal, absent, finalization and closed/read-only state. Admin correction required a reason, showed "corregido", and changed a volunteer total from 1 to 0.5 hours. Supervisor had actions on their own open activity and a read-only row with no buttons on another. Future, draft and cancelled activity messages rendered. Showcase records were left in Atlas at the user's request.
+- [x] Every change written to `audit_log` (checked against Atlas: insert per record, update per finalize and correction, no lock fields in snapshots)
+- [x] Totals always derived from finalized attendance (volunteer detail shows the hours after finalizing, and again after a correction)
+
+Follow-up decision for `/architect`: changing an open activity's schedule after attendance exists can make its recorded times or hours invalid. Spec 0005 does not define this edit rule. One option is to refuse schedule edits once any attendance record exists.
+
+Showcase data left in Atlas: "Clasificación de alimentos · asistencia" is closed with finalized present, late and absent rows plus an admin correction. "Preparación de despensas · asistencia" is open with three unrecorded people for the recording demo; its supervisor is Daniela Ruiz. "Registro de donaciones · coordinación" is open with one unrecorded person and no supervisor for the read-only supervisor view. All three ran 25 September, 6:00–9:00 p.m.; after that window they appear under Pasadas.
 
 ## 5. Dashboard
 

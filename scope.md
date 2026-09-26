@@ -31,8 +31,8 @@ The one path the MVP has to walk end to end:
 |---|---|---|
 | 0 | Stack decision + foundation | done |
 | 1 | Staff auth & roles | done (spec 0002) |
-| 2 | Volunteers | done, awaiting review (spec 0003) |
-| 3 | Activities & assignments | not started |
+| 2 | Volunteers | done (spec 0003) |
+| 3 | Activities & assignments | in progress (spec 0004) |
 | 4 | Attendance & hours | not started |
 | 5 | Dashboard | not started |
 | 6 | Reports + CSV export | not started |
@@ -112,12 +112,17 @@ or late), which AGENTS.md lists as a computed value.
 
 ## 3. Activities & assignments
 
-- [ ] Create and edit activities; status changes draft → open → closed, or cancelled
-- [ ] Assign volunteers, only to `open` activities and only if the volunteer is `active`
-- [ ] Capacity enforced atomically (transaction or conditional update), with no race condition
-- [ ] Block overlapping assignments for the same volunteer
-- [ ] Cancel an assignment (no delete)
-- [ ] Every change written to `audit_log`
+Spec: [`docs/specs/0004-activities-assignments.md`](docs/specs/0004-activities-assignments.md) (decisions approved 2026-09-25). Branch: `feature/activities`.
+
+- [x] Design it (spec)
+- [ ] Build it: `/develop` activities & assignments
+  - [ ] Schema changes (`assignedCount`, `assignmentLock`, cancel fields, validator, index, capacity max 1000) (AC-1, AC-7)
+  - [ ] Create and list activities, API and app, end to end on the emulator (AC-1, AC-2, AC-12)
+  - [ ] Detail, status changes draft/open/closed/cancelled, edit, supervisor picker (AC-3, AC-4, AC-13, AC-14)
+  - [ ] Assign and cancel assignments: capacity counter, volunteer lock, overlap, reactivation; Participantes and Asignar screens (AC-5, AC-6, AC-8, AC-9, AC-11)
+  - [ ] Date edit overlap check naming who is affected (AC-10)
+- [ ] Verify it: API checks for every AC against Atlas (including parallel requests for capacity and overlap), then the flow on the Android emulator as coordinator and supervisor
+- [ ] Every change written to `audit_log` (checked as part of verify)
 
 ## 4. Attendance & hours
 

@@ -6,6 +6,8 @@ export class ApiError extends Error {
     public readonly status = 0,
     // Field-level messages from a 400/409, keyed by field name.
     public readonly fields: Record<string, string> = {},
+    // The parsed error body, for extra details a screen shows itself (such as the date conflicts list).
+    public readonly body: unknown = null,
   ) { super(message); }
 }
 
@@ -54,7 +56,7 @@ export async function apiRequest(path: string, options: RequestOptions = {}): Pr
     const body: unknown = await response.json().catch(() => null);
     if ([400, 403, 404, 409].includes(response.status)) {
       const fields = typeof body === 'object' && body !== null && 'fields' in body ? stringRecord(body.fields) : {};
-      throw new ApiError(serverMessage(body) ?? 'No pudimos completar la solicitud. Revisa los datos e inténtalo de nuevo.', response.status, fields);
+      throw new ApiError(serverMessage(body) ?? 'No pudimos completar la solicitud. Revisa los datos e inténtalo de nuevo.', response.status, fields, body);
     }
     if (!response.ok) throw new ApiError('No pudimos completar la solicitud. Inténtalo de nuevo en unos minutos.', response.status);
     return body;

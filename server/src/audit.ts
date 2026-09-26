@@ -2,8 +2,9 @@ import { ObjectId } from 'mongodb';
 import type { ClientSession, Document } from 'mongodb';
 import type { AuditAction, V2Collections } from './collections.js';
 
-// Never copied into an audit snapshot: credentials and live sessions must not spread to a second place.
-const secretFields = new Set(['passwordHash', 'sessions']);
+// Never copied into an audit snapshot: credentials and live sessions must not spread to a second place,
+// and the volunteer's assignmentLock is internal concurrency bookkeeping, not a change anyone made.
+const secretFields = new Set(['passwordHash', 'sessions', 'assignmentLock']);
 
 function snapshot(record: Document | null | undefined): Document | undefined {
   if (!record) return undefined;

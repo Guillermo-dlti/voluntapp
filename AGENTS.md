@@ -89,9 +89,9 @@ Every document has `_id` (ObjectId), `createdAt`, `updatedAt` (BSON dates). Refe
 | Collection | Fields | Indexes / constraints |
 |---|---|---|
 | `staff_users` | `fullName`, `email`, `passwordHash`, `role` (`admin` \| `coordinator` \| `supervisor`), `active`, `sessions[]` (`tokenHash`, `createdAt`, `expiresAt`) | unique `email` (trimmed, lowercased); index on `sessions.tokenHash` |
-| `volunteers` | `firstName`, `lastName`, `email` (optional), `phone`, `birthDate` (optional), `emergencyContactName`, `emergencyContactPhone`, `status` (`active` \| `inactive`), `notes`, `createdBy` | unique `email` when present (partial index) |
-| `activities` | `name`, `description`, `location`, `startsAt`, `endsAt`, `capacity`, `requirements`, `status` (`draft` \| `open` \| `closed` \| `cancelled`), `supervisorId` (optional), `createdBy` | `endsAt > startsAt`, `capacity ≥ 1` |
-| `assignments` | `volunteerId`, `activityId`, `assignedBy`, `status` (`assigned` \| `cancelled`), `cancelledReason` | unique (`volunteerId`, `activityId`) |
+| `volunteers` | `firstName`, `lastName`, `email` (optional), `phone`, `birthDate` (optional), `emergencyContactName`, `emergencyContactPhone`, `status` (`active` \| `inactive`), `notes`, `createdBy`, `assignmentLock` (internal, never returned or audited) | unique `email` when present (partial index) |
+| `activities` | `name`, `description`, `location`, `startsAt`, `endsAt`, `capacity`, `assignedCount` (internal counter of `assigned` assignments), `requirements`, `status` (`draft` \| `open` \| `closed` \| `cancelled`), `supervisorId` (optional), `createdBy` | `endsAt > startsAt`, `1 ≤ capacity ≤ 1000`, `assignedCount ≤ capacity` |
+| `assignments` | `volunteerId`, `activityId`, `assignedBy`, `status` (`assigned` \| `cancelled`), `cancelledReason`, `cancelledAt`, `cancelledBy` | unique (`volunteerId`, `activityId`); index (`volunteerId`, `status`) |
 | `attendance` | `assignmentId`, `status` (`present` \| `absent` \| `late`), `checkInAt`, `checkOutAt`, `hours` (≥ 0, 2 decimals), `recordedBy`, `finalized` (default false), `finalizedAt`, `finalizedBy` | unique `assignmentId` |
 | `audit_log` | `actorId`, `action` (`insert` \| `update` \| `export` \| `login` \| `logout`), `collection`, `recordId`, `before`, `after`, `createdAt` | insert only |
 
@@ -118,6 +118,7 @@ Mongo has no triggers, so every write goes through shared service functions in `
 - Every new route: `requireStaff(staffUsers, '<capability>')` from `server/src/session.ts`, plus `canOnActivity()` for supervisor "own activities" grants. Writes call `writeAudit()`; logs use `log` from `server/src/logger.ts`.
 - App calls go through `apiRequest()` in `src/services/api.ts` (session token, timeout, plain Spanish errors, field errors from 400/409). On a 401, screens call `refresh()` from `useAuth()` to sign out.
 - Volunteers (feature 2, spec 0003): `/api/volunteers` in `server/src/volunteers.ts`; screens in `src/app/(tabs)/voluntarios/` (list, `nuevo`, `[id]`, `[id]/editar`). Writes and their audit entry run in one transaction (`client.withSession` + `withTransaction`); follow that for new write routes.
+- Activities and assignments (feature 3, spec 0004): `/api/activities` in `server/src/activities.ts`, supervisor picker `/api/staff/supervisors` in `server/src/staff.ts`; screens in `src/app/(tabs)/actividades/` (list, `nueva`, `[id]`, `[id]/editar`, `[id]/asignar`). Every assignment change goes through the service functions there: they keep `activities.assignedCount` in step and stamp `volunteers.assignmentLock` in the same transaction, which is what makes capacity and overlap race safe. Shared route helpers (`parseId`, `searchPattern`, `inTransaction`) live in `server/src/common.ts`. Forms enter dates and times as Guadalajara wall clock (`mexicoMoment`/`mexicoParts` in `src/utils/time.ts`); `DateField` and `TimeField` open the native Material dialogs from `@expo/ui` (inline pickers inside a scroll view make the form jump).
 - Local staff accounts come from `npm run server:seed` (`admin@`, `coordinador@`, `supervisor@bamx.test`, password `SEED_STAFF_PASSWORD`).
 
 ## Design

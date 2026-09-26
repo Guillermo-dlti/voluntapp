@@ -5,6 +5,7 @@ import type { Db } from 'mongodb';
 import { authRouter } from './auth.js';
 import type { V2Collections } from './collections.js';
 import { log } from './logger.js';
+import { volunteersRouter } from './volunteers.js';
 
 export function createApp(database: Db, collections: V2Collections) {
   const app = express();
@@ -26,6 +27,7 @@ export function createApp(database: Db, collections: V2Collections) {
 
   app.use(express.json({ limit: '16kb' }));
   app.use('/api/auth', authRouter(collections));
+  app.use('/api/volunteers', volunteersRouter(collections, database.client));
 
   app.use((_request, response) => {
     response.status(404).json({ message: 'No encontramos la ruta solicitada.' });

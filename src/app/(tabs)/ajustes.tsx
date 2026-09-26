@@ -3,13 +3,13 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Avatar } from '@/components/avatar';
 import { Row, Section } from '@/components/grouped-list';
 import { Screen } from '@/components/screen';
 import { roleCan, roleLabels } from '@/constants/roles';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { authMessage } from '@/services/auth';
-import { initials } from '@/utils/time';
 
 export default function SettingsScreen() {
   const { user, signOut, refresh } = useAuth();
@@ -33,15 +33,15 @@ export default function SettingsScreen() {
   const isAdmin = roleCan.manageStaff(user.role);
 
   return (
-    <Screen testID="settings-screen" title="Ajustes">
+    <Screen testID="settings-screen" title="Ajustes" band={
       <View style={styles.profile}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>{initials(user.fullName)}</Text></View>
+        <Avatar name={user.fullName} size={56} />
         <View style={styles.profileText}>
           <Text style={styles.name}>{user.fullName}</Text>
           <Text style={styles.email}>{user.email}</Text>
         </View>
       </View>
-
+    }>
       <View testID="settings-account-section">
         <Section title="Cuenta">
           <Row icon={{ ios: 'envelope', android: 'mail' }} label="Correo" value={user.email} />
@@ -67,18 +67,9 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  profile: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 4 },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: Radius.pill,
-    backgroundColor: Brand.forest,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontFamily: AppFonts.heading, fontSize: 22, color: Brand.forestText },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   profileText: { flex: 1, gap: 2 },
-  name: { fontFamily: AppFonts.heading, fontSize: 21, color: Brand.text },
-  email: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },
+  name: { fontFamily: AppFonts.headingSemiBold, fontSize: 19, color: Brand.forestText },
+  email: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.forestMuted },
   version: { fontFamily: AppFonts.body, fontSize: 12, color: Brand.textTertiary, textAlign: 'center' },
 });

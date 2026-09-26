@@ -31,7 +31,7 @@ The one path the MVP has to walk end to end:
 |---|---|---|
 | 0 | Stack decision + foundation | done |
 | 1 | Staff auth & roles | done (spec 0002) |
-| 2 | Volunteers | not started |
+| 2 | Volunteers | ready to build (spec 0003) |
 | 3 | Activities & assignments | not started |
 | 4 | Attendance & hours | not started |
 | 5 | Dashboard | not started |
@@ -78,6 +78,8 @@ Revoking sessions when an admin deactivates someone is part of feature 7
 next request.
 
 ## 2. Volunteers
+
+Spec: [`docs/specs/0003-volunteers.md`](docs/specs/0003-volunteers.md) (plan and decisions approved 2026-09-25). Branch: `feature/volunteers`.
 
 - [ ] Create and edit volunteers (validated in the UI and on the server)
 - [ ] List with search (name, email, phone) and filter (status)

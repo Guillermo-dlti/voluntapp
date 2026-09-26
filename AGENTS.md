@@ -116,6 +116,8 @@ Mongo has no triggers, so every write goes through shared service functions in `
 
 - `POST /api/auth/login` (email + password), `GET /api/auth/me`, `POST /api/auth/logout`. Sessions last 12 hours.
 - Every new route: `requireStaff(staffUsers, '<capability>')` from `server/src/session.ts`, plus `canOnActivity()` for supervisor "own activities" grants. Writes call `writeAudit()`; logs use `log` from `server/src/logger.ts`.
+- App calls go through `apiRequest()` in `src/services/api.ts` (session token, timeout, plain Spanish errors, field errors from 400/409). On a 401, screens call `refresh()` from `useAuth()` to sign out.
+- Volunteers (feature 2, spec 0003): `/api/volunteers` in `server/src/volunteers.ts`; screens in `src/app/(tabs)/voluntarios/` (list, `nuevo`, `[id]`, `[id]/editar`). Writes and their audit entry run in one transaction (`client.withSession` + `withTransaction`); follow that for new write routes.
 - Local staff accounts come from `npm run server:seed` (`admin@`, `coordinador@`, `supervisor@bamx.test`, password `SEED_STAFF_PASSWORD`).
 
 ## Design
@@ -124,8 +126,10 @@ Aim: a real, calm operations app for food bank staff, not a template. Reuse the 
 
 - **Tokens** live in `src/constants/theme.ts`: leaf green `primary` for actions, `forest` for header bands, `accent` (mango, from the BAMX logo) only for things that need attention, `background` light green-gray. No raw hex values in screens.
 - **Type:** Outfit for titles and numbers, Geist for body. Sentence case, no all-caps labels.
-- **Structure:** grouped lists (`Section` + `Row` in `src/components/grouped-list.tsx`) instead of a separate shadowed card per item; no drop shadows. Radius follows hierarchy (`Radius.sheet` > `card` > `button`/`input`).
-- **Screens:** tab screens use `Screen` (large left-aligned title). Empty lists use `EmptyState` and say what will appear and why it's empty. Icons via `Icon` (SF Symbols on iOS, Material Symbols on Android; no icon assets).
+- **Depth** (modeled on Shopify's mobile admin): controls (buttons, inputs, chips) stay flat with a 1px border; only content surfaces and floating elements cast a shadow, and only through the tokens `Elevation.card` (via `Card`) and `Elevation.raised` (`Fab`). Press feedback is `PressableScale` (`Motion` tokens, short ease-out). No other ad hoc shadows.
+- **Structure:** grouped lists (`Section` + `Row` in `src/components/grouped-list.tsx`) on one `Card` per section, instead of a separate card per item. Radius follows hierarchy (`Radius.sheet` > `card` > `button`/`input`).
+- **Screens:** tab screens use `Screen`: forest band with a large left-aligned title (optional `eyebrow`, `action`, `band` content such as search and filters), content on a rounded sheet over it; `floating` for a `Fab`, `scroll={false}` when the screen has its own `FlatList`. Empty lists use `EmptyState` and say what will appear and why it's empty. Icons via `Icon` (SF Symbols on iOS, Material Symbols on Android; no icon assets).
+- **Shared pieces** in `src/components`: `Button` (primary/secondary/critical), `Avatar` (initials, stable color per name), `StatusBadge` (tinted pill with dot; status always in words too), `FilterChips`, `SearchField`, `Fab` (extended, label always visible), `StatCard` (one big number).
 - **Copy:** plain Spanish verbs; buttons say what happens ("Entrar", "Cerrar sesión"); errors say what went wrong and what to do.
 
 ## Screens (Android)

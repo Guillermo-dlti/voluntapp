@@ -71,6 +71,7 @@ export const Brand = {
   forest: '#183B24',
   forestText: '#E4EFE6',
   forestMuted: '#9DB8A3',
+  forestPressed: 'rgba(255, 255, 255, 0.12)',
   accent: '#E9A23B',
   accentLight: '#FDF3E3',
   accentText: '#8A5A12',
@@ -100,6 +101,30 @@ export const Radius = {
   input: 14,
   pill: 999,
 } as const;
+
+// Depth, after Shopify's mobile admin: controls stay flat with a border, and only surfaces that
+// hold content (cards) or float over it (FAB, sheets) cast a shadow. Tinted with forest instead of
+// gray so shadows read as part of the palette. Needs Android 9+ (boxShadow).
+export const Elevation = {
+  card: '0px 1px 2px 0px rgba(24, 59, 36, 0.06), 0px 4px 12px -4px rgba(24, 59, 36, 0.12)',
+  raised: '0px 8px 16px -4px rgba(24, 59, 36, 0.28), 0px 2px 4px 0px rgba(24, 59, 36, 0.10)',
+} as const;
+
+// Short and ease-out, like Polaris: feedback should feel immediate, not animated for show.
+export const Motion = {
+  fast: 150,
+  easeOut: [0.19, 0.91, 0.38, 1] as const,
+  pressedScale: 0.97,
+} as const;
+
+// Background/text pairs for initials avatars. Picked per name, so a person keeps their color.
+export const AvatarTones = [
+  { background: '#DCEFDD', text: '#1F5A23' },
+  { background: '#FDEBCB', text: '#8A5A12' },
+  { background: '#D8ECEA', text: '#1D5C57' },
+  { background: '#E7E3F3', text: '#4A3F7A' },
+  { background: '#F6DFD8', text: '#8C3B26' },
+] as const;
 
 export const AppFonts = {
   heading: 'Outfit_700Bold',

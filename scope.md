@@ -31,7 +31,7 @@ The one path the MVP has to walk end to end:
 |---|---|---|
 | 0 | Stack decision + foundation | done |
 | 1 | Staff auth & roles | done (spec 0002) |
-| 2 | Volunteers | ready to build (spec 0003) |
+| 2 | Volunteers | done, awaiting review (spec 0003) |
 | 3 | Activities & assignments | not started |
 | 4 | Attendance & hours | not started |
 | 5 | Dashboard | not started |
@@ -81,11 +81,34 @@ next request.
 
 Spec: [`docs/specs/0003-volunteers.md`](docs/specs/0003-volunteers.md) (plan and decisions approved 2026-09-25). Branch: `feature/volunteers`.
 
-- [ ] Create and edit volunteers (validated in the UI and on the server)
-- [ ] List with search (name, email, phone) and filter (status)
-- [ ] Deactivate and reactivate (no delete)
-- [ ] Detail page: activity history plus total hours derived from finalized attendance
-- [ ] Every change written to `audit_log`
+**Design pass first** (approved 2026-09-25: keep our own components, add depth,
+modeled on Shopify's admin and its `light-mobile` Polaris theme: flat bordered
+controls, depth on cards and raised elements only, fast ease-out motion).
+
+- [x] Tokens: `Elevation` (card, raised), `Motion`, avatar tones in `theme.ts`
+- [x] `Screen` gets the forest header band on every tab (title, optional action and band content), body as a sheet over it
+- [x] Grouped lists and empty states sit on an elevated card surface
+- [x] New shared components: `PressableScale`, `Card`, `Avatar`, `StatusBadge`, `FilterChips`, `SearchField`, `Fab`, `StatCard`; `Button` gets secondary/critical variants and an icon
+- [x] Existing tabs (Inicio, Voluntarios, Actividades, Reportes, Ajustes) moved onto the new pieces
+- [x] `AGENTS.md` → Design updated (soft shadows on raised elements)
+- [x] Verify: typecheck passes; Inicio, Actividades, Ajustes checked on the Android emulator (band, sheet, card shadows, avatar). Search, chips, badge, FAB and stat card get their first real use in the Volunteers screens
+
+**Volunteers**
+
+- [x] Shared app request helper `src/services/api.ts` (auth client moved onto it)
+- [x] API `server/src/volunteers.ts`: list/search, create, edit, status, detail with history and totals; writes and their audit entry in one transaction
+- [x] Create and edit volunteers (validated in the UI and on the server)
+- [x] List with search (name, email, phone; accent-insensitive, every word must match) and filter (status)
+- [x] Deactivate and reactivate (no delete), with a confirmation before deactivating
+- [x] Detail page: activity history plus total hours and completed activities derived from finalized attendance
+- [x] Every change written to `audit_log`
+- [x] Verify: 31 API checks against Atlas pass (every AC in spec 0003; test records removed afterwards). On the emulator: supervisor sees the list read only with no "Nuevo" button; coordinator creates (with field errors first), picks a birth date, views detail, deactivates, reactivates, edits, and finds the record by searching
+
+Notes: the date picker is the native Material one from `@expo/ui`; it only keeps a
+date after "Usar fecha", because it reports its starting date as soon as it opens.
+Its labels follow the phone's language (English on the emulator, Spanish on a
+phone set to es-MX). Detail also returns `completedActivities` (finalized present
+or late), which AGENTS.md lists as a computed value.
 
 ## 3. Activities & assignments
 

@@ -1,7 +1,7 @@
 # 0003. Volunteer records: list, create, edit, deactivate, detail
 
 **Date**: 2026-09-25
-**Status**: Proposed
+**Status**: Implemented
 
 ## Summary
 

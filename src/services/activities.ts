@@ -19,8 +19,20 @@ export interface Activity extends ActivitySummary {
   description: string | null;
   requirements: string | null;
   supervisorId: string | null;
+  attendanceFinalizedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type AttendanceStatus = 'present' | 'late' | 'absent';
+
+export interface AttendanceRecord {
+  status: AttendanceStatus;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  hours: number;
+  finalized: boolean;
+  correctionReason: string | null;
 }
 
 export interface Participant {
@@ -31,6 +43,13 @@ export interface Participant {
   phone: string;
   status: 'assigned' | 'cancelled';
   cancelledReason: string | null;
+  attendance: AttendanceRecord | null;
+}
+
+export interface MissingPerson {
+  assignmentId: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface ActivityDetail {
@@ -65,12 +84,20 @@ function isSummary(value: unknown): value is ActivitySummary {
 
 function isActivity(value: unknown): value is Activity {
   return isSummary(value) && isRecord(value) && strOrNull(value.description) && strOrNull(value.requirements)
-    && strOrNull(value.supervisorId) && str(value.createdAt) && str(value.updatedAt);
+    && strOrNull(value.supervisorId) && strOrNull(value.attendanceFinalizedAt) && str(value.createdAt) && str(value.updatedAt);
+}
+
+const attendanceStatuses: readonly unknown[] = ['present', 'late', 'absent'];
+
+function isAttendance(value: unknown): value is AttendanceRecord {
+  return isRecord(value) && attendanceStatuses.includes(value.status) && strOrNull(value.checkInAt) && strOrNull(value.checkOutAt)
+    && num(value.hours) && typeof value.finalized === 'boolean' && strOrNull(value.correctionReason);
 }
 
 function isParticipant(value: unknown): value is Participant {
   return isRecord(value) && str(value.assignmentId) && str(value.volunteerId) && str(value.firstName) && str(value.lastName)
-    && str(value.phone) && (value.status === 'assigned' || value.status === 'cancelled') && strOrNull(value.cancelledReason);
+    && str(value.phone) && (value.status === 'assigned' || value.status === 'cancelled') && strOrNull(value.cancelledReason)
+    && (value.attendance === null || isAttendance(value.attendance));
 }
 
 function activityFrom(result: unknown): Activity {
@@ -123,6 +150,41 @@ export async function assignVolunteer(activityId: string, volunteerId: string): 
 
 export async function cancelAssignment(activityId: string, assignmentId: string, reason: string): Promise<void> {
   await apiRequest(`${path(activityId)}/assignments/${encodeURIComponent(assignmentId)}/cancel`, { method: 'POST', body: { reason } });
+}
+
+export interface AttendancePayload {
+  status: AttendanceStatus;
+  checkInAt?: string;
+  checkOutAt?: string;
+  hours?: number;
+}
+
+const attendancePath = (activityId: string, assignmentId: string) =>
+  `${path(activityId)}/attendance/${encodeURIComponent(assignmentId)}`;
+
+export async function recordAttendance(activityId: string, assignmentId: string, payload: AttendancePayload): Promise<void> {
+  await apiRequest(attendancePath(activityId, assignmentId), { method: 'PUT', body: payload });
+}
+
+export async function correctAttendance(activityId: string, assignmentId: string, payload: AttendancePayload & { reason: string }): Promise<void> {
+  await apiRequest(`${attendancePath(activityId, assignmentId)}/correct`, { method: 'POST', body: payload });
+}
+
+export async function markAllPresent(activityId: string): Promise<number> {
+  const result = await apiRequest(`${path(activityId)}/attendance/mark-all-present`, { method: 'POST' });
+  if (!isRecord(result) || !num(result.created)) throw malformed();
+  return result.created;
+}
+
+export async function finalizeAttendance(activityId: string): Promise<Activity> {
+  return activityFrom(await apiRequest(`${path(activityId)}/attendance/finalize`, { method: 'POST' }));
+}
+
+// The people without a record, from a 409 on finalize.
+export function missingPeople(error: unknown): MissingPerson[] {
+  if (!(error instanceof ApiError) || !isRecord(error.body) || !Array.isArray(error.body.missing)) return [];
+  return error.body.missing.filter((entry): entry is MissingPerson =>
+    isRecord(entry) && str(entry.assignmentId) && str(entry.firstName) && str(entry.lastName));
 }
 
 export async function listSupervisors(): Promise<{ id: string; fullName: string }[]> {

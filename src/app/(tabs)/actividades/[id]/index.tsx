@@ -10,15 +10,19 @@ import { Row, Section } from '@/components/grouped-list';
 import { ReasonDialog } from '@/components/reason-dialog';
 import { Screen } from '@/components/screen';
 import { StatCard } from '@/components/stat-card';
+import { StatusBadge, type BadgeTone } from '@/components/status-badge';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import {
-  cancelAssignment, getActivity, setActivityStatus,
-  type ActivityDetail, type ActivityStatus, type Participant,
+  cancelAssignment, finalizeAttendance, getActivity, markAllPresent, missingPeople, setActivityStatus,
+  type ActivityDetail, type ActivityStatus, type AttendanceStatus, type MissingPerson, type Participant,
 } from '@/services/activities';
-import { formatSchedule } from '@/utils/time';
+import { attendanceStatusLabels, hoursText } from '@/utils/attendance-rules';
+import { formatDateTime, formatSchedule } from '@/utils/time';
+
+const attendanceTones: Record<AttendanceStatus, BadgeTone> = { present: 'success', late: 'attention', absent: 'critical' };
 import { formatPhone } from '@/utils/volunteer-rules';
 
 export default function ActivityDetailScreen() {
@@ -27,7 +31,9 @@ export default function ActivityDetailScreen() {
   const { user, refresh } = useAuth();
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState<ActivityStatus | null>(null);
+  const [busy, setBusy] = useState<ActivityStatus | 'mark-all' | 'finalize' | null>(null);
+  const [attendanceMessage, setAttendanceMessage] = useState('');
+  const [missing, setMissing] = useState<MissingPerson[]>([]);
   const [cancelling, setCancelling] = useState<Participant | null>(null);
   const pending = useRef(false);
 
@@ -57,6 +63,44 @@ export default function ActivityDetailScreen() {
       setMessage(apiMessage(cause, 'No pudimos cambiar el estado. Inténtalo de nuevo.'));
       void load();
     } finally { pending.current = false; setBusy(null); }
+  }
+
+  async function markAll() {
+    if (pending.current || !detail) return;
+    pending.current = true;
+    setBusy('mark-all');
+    setAttendanceMessage('');
+    setMissing([]);
+    try {
+      await markAllPresent(detail.activity.id);
+      await load();
+    } catch (cause: unknown) {
+      if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
+      setAttendanceMessage(apiMessage(cause, 'No pudimos marcar la asistencia. Inténtalo de nuevo.'));
+    } finally { pending.current = false; setBusy(null); }
+  }
+
+  async function finalize() {
+    if (pending.current || !detail) return;
+    pending.current = true;
+    setBusy('finalize');
+    setAttendanceMessage('');
+    setMissing([]);
+    try {
+      await finalizeAttendance(detail.activity.id);
+      await load();
+    } catch (cause: unknown) {
+      if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
+      setAttendanceMessage(apiMessage(cause, 'No pudimos finalizar la asistencia. Inténtalo de nuevo.'));
+      setMissing(missingPeople(cause));
+      void load();
+    } finally { pending.current = false; setBusy(null); }
+  }
+
+  function confirmFinalize() {
+    Alert.alert('¿Finalizar la asistencia?',
+      'Las horas se vuelven oficiales y cuentan en el total de cada voluntario. La actividad se cierra y ya no se puede asignar a nadie. Después, solo Administración puede corregir un registro.',
+      [{ text: 'Volver', style: 'cancel' }, { text: 'Finalizar', onPress: () => void finalize() }]);
   }
 
   function confirm(title: string, body: string, action: string, next: ActivityStatus) {
@@ -174,10 +218,7 @@ export default function ActivityDetailScreen() {
         </Section>
       ) : null}
 
-      <Section title="Asistencia" bare>
-        <EmptyState icon={{ ios: 'checklist', android: 'fact_check' }} title="La asistencia llega pronto"
-          body="Aquí vas a marcar quién asistió, con sus horas, y finalizar la asistencia. Se activa en la siguiente versión." />
-      </Section>
+      {attendanceSection()}
 
       <ReasonDialog testID="cancel-assignment" visible={cancelling !== null}
         title={cancelling ? `¿Cancelar la asignación de ${cancelling.firstName}?` : ''}
@@ -186,6 +227,75 @@ export default function ActivityDetailScreen() {
         onConfirm={cancelParticipant} onClose={() => setCancelling(null)} />
     </Screen>
   );
+
+  function attendanceSection() {
+    if (!user) return null;
+    if (activity.status === 'draft' || activity.status === 'cancelled') {
+      return (
+        <Section title="Asistencia" footer={activity.status === 'draft'
+          ? 'La asistencia se registra cuando la actividad está publicada y ya empezó.'
+          : 'Una actividad cancelada no lleva asistencia.'} bare>{null}</Section>
+      );
+    }
+    if (new Date(activity.startsAt) > new Date()) {
+      return (
+        <Section title="Asistencia" bare>
+          <EmptyState icon={{ ios: 'clock', android: 'schedule' }} title="La asistencia se abre al empezar"
+            body={`Podrás marcar quién asistió a partir del ${formatDateTime(activity.startsAt)}.`} />
+        </Section>
+      );
+    }
+    if (assigned.length === 0) {
+      return (
+        <Section title="Asistencia" bare>
+          <EmptyState icon={{ ios: 'checklist', android: 'fact_check' }} title="Nadie a quien tomar asistencia"
+            body="La asistencia se registra para las personas asignadas. Asigna voluntarios para poder tomarla." />
+        </Section>
+      );
+    }
+    const finalized = activity.attendanceFinalizedAt !== null;
+    const canRecord = !finalized && roleCan.recordAttendance(user.role, activity.supervisorId, user.id);
+    const canCorrect = finalized && roleCan.correctAttendance(user.role);
+    const recorded = assigned.filter((entry) => entry.attendance !== null).length;
+    const footer = activity.attendanceFinalizedAt
+      ? `Asistencia finalizada el ${formatDateTime(activity.attendanceFinalizedAt)}${canCorrect ? ' Toca a una persona para corregir su registro.' : ''}`
+      : `${recorded} de ${assigned.length} registrados.${canRecord ? ' Toca a una persona para registrar o cambiar su asistencia.' : ''}`;
+    const open = (entry: Participant) => router.push({
+      pathname: '/actividades/[id]/asistencia/[assignmentId]', params: { id: activity.id, assignmentId: entry.assignmentId },
+    });
+    return (
+      <>
+        <Section title="Asistencia" footer={footer}>
+          {assigned.map((entry) => (
+            <Row key={entry.assignmentId} testID={`attendance-${entry.volunteerId}`}
+              leading={<Avatar name={`${entry.firstName} ${entry.lastName}`} />}
+              label={`${entry.firstName} ${entry.lastName}`}
+              value={entry.attendance ? `${hoursText(entry.attendance.hours)} h${entry.attendance.correctionReason ? ' · corregido' : ''}` : undefined}
+              trailing={entry.attendance
+                ? <StatusBadge label={attendanceStatusLabels[entry.attendance.status]} tone={attendanceTones[entry.attendance.status]} />
+                : <StatusBadge label="Sin registrar" tone="neutral" />}
+              onPress={canRecord || canCorrect ? () => open(entry) : undefined} />
+          ))}
+        </Section>
+        {attendanceMessage ? (
+          <View accessibilityRole="alert" style={styles.alert}>
+            <Text style={styles.alertText}>{attendanceMessage}</Text>
+            {missing.map((person) => <Text key={person.assignmentId} style={styles.alertText}>· {person.firstName} {person.lastName}</Text>)}
+          </View>
+        ) : null}
+        {canRecord ? (
+          <View style={styles.actions}>
+            {recorded < assigned.length ? (
+              <Button testID="attendance-mark-all" label="Marcar todos presentes" busyLabel="Marcando…" busy={busy === 'mark-all'}
+                variant="secondary" icon={{ ios: 'checkmark.circle', android: 'done_all' }} onPress={() => void markAll()} />
+            ) : null}
+            <Button testID="attendance-finalize" label="Finalizar asistencia" busyLabel="Finalizando…" busy={busy === 'finalize'}
+              icon={{ ios: 'lock', android: 'lock' }} onPress={confirmFinalize} />
+          </View>
+        ) : null}
+      </>
+    );
+  }
 
   // Tapping a participant offers the actions for them: call, or cancel their assignment.
   function participantMenu(entry: Participant) {
@@ -202,6 +312,6 @@ const styles = StyleSheet.create({
   block: { gap: 16 },
   stats: { flexDirection: 'row', gap: 12 },
   actions: { gap: 12 },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  alert: { gap: 4, backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
 });

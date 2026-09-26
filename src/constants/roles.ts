@@ -12,6 +12,9 @@ export const roleCan = {
   editVolunteers: (role: StaffRole) => role !== 'supervisor',
   editActivities: (role: StaffRole) => role !== 'supervisor',
   assignVolunteers: (role: StaffRole) => role !== 'supervisor',
+  // Supervisors record and finalize only on activities they supervise (the API's canOnActivity).
+  recordAttendance: (role: StaffRole, supervisorId: string | null, userId: string) => role !== 'supervisor' || supervisorId === userId,
+  correctAttendance: (role: StaffRole) => role === 'admin',
   viewReports: (role: StaffRole) => role !== 'supervisor',
   manageStaff: (role: StaffRole) => role === 'admin',
   viewAudit: (role: StaffRole) => role === 'admin',

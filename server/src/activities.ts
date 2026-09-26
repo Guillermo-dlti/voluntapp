@@ -1,9 +1,11 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Response } from 'express';
 import { ObjectId, type ClientSession, type Filter, type MongoClient } from 'mongodb';
 import { z } from 'zod';
 import { writeAudit } from './audit.js';
-import type { Activity, Assignment, V2Collections } from './collections.js';
-import { inTransaction, isDuplicate, parseId, searchPattern, searchWords } from './common.js';
+import type { Activity, Assignment, Attendance, V2Collections } from './collections.js';
+import {
+  answering, conflict, HttpError, inTransaction, isDuplicate, jsonBody, noControlChars, parseId, searchPattern, searchWords,
+} from './common.js';
 import { log } from './logger.js';
 import { currentStaff, requireStaff } from './session.js';
 
@@ -28,7 +30,6 @@ const fieldMessages = {
 } as const;
 type Field = keyof typeof fieldMessages;
 
-const noControlChars = /^[^\p{Cc}]*$/u;
 const moment = z.iso.datetime({ offset: true });
 const objectIdText = z.string().regex(/^[a-f0-9]{24}$/i);
 
@@ -68,12 +69,6 @@ const listSchema = z.object({
 type EditInput = z.infer<typeof editSchema>;
 type Status = Activity['status'];
 
-// Thrown inside a transaction to abort it and answer with a plain message.
-class HttpError extends Error {
-  constructor(public readonly status: number, public readonly body: Record<string, unknown>) { super('http'); }
-}
-const conflict = (message: string, extra: Record<string, unknown> = {}) => new HttpError(409, { message, ...extra });
-
 function fieldError(fields: Partial<Record<Field, string>>) {
   return new HttpError(400, { message: 'Revisa los campos marcados.', fields });
 }
@@ -95,7 +90,6 @@ function invalid(response: Response, error: z.ZodError) {
 const notFound = { message: 'No encontramos esa actividad. Puede que el enlace ya no sea válido.' };
 const volunteerNotFound = { message: 'No encontramos a ese voluntario. Actualiza la lista e inténtalo de nuevo.' };
 const assignmentNotFound = { message: 'No encontramos esa asignación. Actualiza la actividad e inténtalo de nuevo.' };
-const unreadable = { message: 'No pudimos leer los datos enviados.' };
 
 function timeError(startsAt: Date, endsAt: Date): string | null {
   const length = endsAt.getTime() - startsAt.getTime();
@@ -106,8 +100,8 @@ function formatMoment(date: Date): string {
   return new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone }).format(date);
 }
 
-// Explicit fields so nothing unexpected is ever sent to the app.
-function publicActivity(activity: Activity) {
+// Explicit fields so nothing unexpected (such as attendanceLock) is ever sent to the app.
+export function publicActivity(activity: Activity) {
   return {
     id: activity._id.toHexString(),
     name: activity.name,
@@ -120,8 +114,22 @@ function publicActivity(activity: Activity) {
     requirements: activity.requirements ?? null,
     status: activity.status,
     supervisorId: activity.supervisorId?.toHexString() ?? null,
+    attendanceFinalizedAt: activity.attendanceFinalizedAt?.toISOString() ?? null,
     createdAt: activity.createdAt.toISOString(),
     updatedAt: activity.updatedAt.toISOString(),
+  };
+}
+
+type AttendanceView = Pick<Attendance, 'status' | 'checkInAt' | 'checkOutAt' | 'hours' | 'finalized' | 'correctionReason'>;
+
+export function publicAttendance(record: AttendanceView) {
+  return {
+    status: record.status,
+    checkInAt: record.checkInAt?.toISOString() ?? null,
+    checkOutAt: record.checkOutAt?.toISOString() ?? null,
+    hours: record.hours,
+    finalized: record.finalized,
+    correctionReason: record.correctionReason ?? null,
   };
 }
 
@@ -172,25 +180,9 @@ interface OverlapRow {
 }
 
 export function activitiesRouter(collections: V2Collections, client: MongoClient) {
-  const { staffUsers, volunteers, activities, assignments } = collections;
+  const { staffUsers, volunteers, activities, assignments, attendance } = collections;
   const router = Router();
   const transaction = <T>(work: (session: ClientSession) => Promise<T>) => inTransaction(client, work);
-
-  // Runs a handler that may throw HttpError (usually from inside a transaction) and answers with it.
-  async function answering(response: Response, work: () => Promise<void>) {
-    try {
-      await work();
-    } catch (error: unknown) {
-      if (error instanceof HttpError) { response.status(error.status).json(error.body); return; }
-      throw error;
-    }
-  }
-
-  function jsonBody(request: Request, response: Response): boolean {
-    if (request.is('application/json')) return true;
-    response.status(400).json(unreadable);
-    return false;
-  }
 
   async function checkSupervisor(id: string | undefined): Promise<ObjectId | undefined> {
     if (!id) return undefined;
@@ -299,13 +291,19 @@ export function activitiesRouter(collections: V2Collections, client: MongoClient
     const participants = await assignments.aggregate<{
       _id: ObjectId; volunteerId: ObjectId; status: 'assigned' | 'cancelled'; cancelledReason?: string;
       volunteer: { firstName: string; lastName: string; phone: string };
+      attendance?: AttendanceView;
     }>([
       { $match: { activityId: id } },
       { $lookup: { from: 'volunteers', localField: 'volunteerId', foreignField: '_id', as: 'volunteer', pipeline: [{ $project: { firstName: 1, lastName: 1, phone: 1 } }] } },
       { $unwind: '$volunteer' },
+      { $lookup: {
+        from: 'attendance', localField: '_id', foreignField: 'assignmentId', as: 'attendance',
+        pipeline: [{ $project: { status: 1, checkInAt: 1, checkOutAt: 1, hours: 1, finalized: 1, correctionReason: 1 } }],
+      } },
+      { $unwind: { path: '$attendance', preserveNullAndEmptyArrays: true } },
       // 'assigned' sorts before 'cancelled', so assigned people come first.
       { $sort: { status: 1, 'volunteer.lastName': 1, 'volunteer.firstName': 1, _id: 1 } },
-      { $project: { volunteerId: 1, status: 1, cancelledReason: 1, volunteer: 1 } },
+      { $project: { volunteerId: 1, status: 1, cancelledReason: 1, volunteer: 1, attendance: 1 } },
     ], { collation: { locale: 'es', strength: 1 } }).toArray();
     response.json({
       activity: publicActivity(activity),
@@ -318,6 +316,7 @@ export function activitiesRouter(collections: V2Collections, client: MongoClient
         phone: entry.volunteer.phone,
         status: entry.status,
         cancelledReason: entry.cancelledReason ?? null,
+        attendance: entry.status === 'assigned' && entry.attendance ? publicAttendance(entry.attendance) : null,
       })),
     });
   });
@@ -504,10 +503,16 @@ export function activitiesRouter(collections: V2Collections, client: MongoClient
         const before = await assignments.findOne({ _id: assignmentId, activityId }, { session });
         if (!before) throw new HttpError(404, assignmentNotFound);
         if (before.status === 'cancelled') throw conflict('Esta asignación ya estaba cancelada.');
+        // Also stamps attendanceLock, so a recording for this person running at the same time collides with it.
         const counted = await activities.updateOne(
-          { _id: activityId, status: 'open', assignedCount: { $gt: 0 } }, { $inc: { assignedCount: -1 } }, { session },
+          { _id: activityId, status: 'open', assignedCount: { $gt: 0 } },
+          { $inc: { assignedCount: -1 }, $set: { attendanceLock: new ObjectId() } },
+          { session },
         );
         if (!counted.matchedCount) throw conflict('Solo puedes cancelar asignaciones de una actividad publicada.');
+        if (await attendance.findOne({ assignmentId }, { session, projection: { _id: 1 } })) {
+          throw conflict('Esta persona ya tiene asistencia registrada, así que su asignación no se puede cancelar. Márcala como ausente en Asistencia.');
+        }
         const now = new Date();
         const after = await assignments.findOneAndUpdate(
           { _id: assignmentId, status: 'assigned' },

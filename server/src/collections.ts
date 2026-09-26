@@ -53,6 +53,11 @@ export interface Activity {
   requirements?: string;
   status: 'draft' | 'open' | 'closed' | 'cancelled';
   supervisorId?: ObjectId;
+  // Set once when attendance is finalized; the activity is closed from then on.
+  attendanceFinalizedAt?: Date;
+  attendanceFinalizedBy?: ObjectId;
+  // Internal: rewritten by every attendance write so it collides with finalize, assign, and cancel.
+  attendanceLock?: ObjectId;
   createdBy: ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -82,6 +87,10 @@ export interface Attendance {
   finalized: boolean;
   finalizedAt?: Date;
   finalizedBy?: ObjectId;
+  // Latest admin correction of a finalized record; earlier ones stay in audit_log.
+  correctionReason?: string;
+  correctedAt?: Date;
+  correctedBy?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -188,6 +197,9 @@ const definitions: CollectionDefinition[] = [
           requirements: text(1000, 0),
           status: { enum: ['draft', 'open', 'closed', 'cancelled'] },
           supervisorId: objectId,
+          attendanceFinalizedAt: date,
+          attendanceFinalizedBy: objectId,
+          attendanceLock: objectId,
           createdBy: objectId,
           ...timestamps,
         },
@@ -236,6 +248,9 @@ const definitions: CollectionDefinition[] = [
           finalized: { bsonType: 'bool' },
           finalizedAt: date,
           finalizedBy: objectId,
+          correctionReason: text(500, 3),
+          correctedAt: date,
+          correctedBy: objectId,
           ...timestamps,
         },
       },

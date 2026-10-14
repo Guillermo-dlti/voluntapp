@@ -35,7 +35,7 @@ The one path the MVP has to walk end to end:
 | 3 | Activities & assignments | done (spec 0004) |
 | 4 | Attendance & hours | done (spec 0005) |
 | 5 | Dashboard | not started |
-| 6 | Reports + CSV export | not started |
+| 6 | Reports + CSV export | done (spec 0006) |
 | 7 | Staff management + audit log viewer | not started |
 | 8 | Hardening | not started |
 
@@ -162,10 +162,15 @@ Showcase data left in Atlas: "Clasificación de alimentos · asistencia" is clos
 
 ## 6. Reports + CSV export
 
-- [ ] Hours per volunteer, attendance per activity, participation by date range
-- [ ] CSV export generated on the server, respecting the caller's role, and written to `audit_log`
-- [ ] Android: download the CSV and open the share sheet (pick the file/sharing library here)
-- [ ] Guard against CSV formula injection (cells starting with `=`, `+`, `-`, `@`)
+Spec: [`docs/specs/0006-reports-csv-export/index.md`](docs/specs/0006-reports-csv-export/index.md) (decisions approved 2026-10-13, cross checked). Branch: `feature/reports`.
+
+- [x] Design it (spec)
+- [x] Build it: `/develop` reports & CSV export. Code in `server/src/reports.ts` (+ `csv.ts`, date helpers in `common.ts`), `src/app/(tabs)/reportes/`, `src/services/reports.ts`. New native modules `expo-file-system` and `expo-sharing`: rebuild the dev build (`npm run android`) after pulling
+  - [x] Range validation and summary, API and the Reportes screen with presets and stat cards (AC-1, AC-2, AC-3, AC-10, AC-11)
+  - [x] Hours per volunteer: list endpoint, preview and full list screen (AC-4, AC-11)
+  - [x] CSV export: writer with injection guard, audit before send, per staff rate limit, download and share on Android (AC-6, AC-7, AC-8, AC-9, AC-12)
+  - [x] Attendance per activity: list, CSV, preview and full list screen (AC-5, AC-6, AC-11, AC-12)
+- [x] Verify it: `/check verify` 2026-10-13, 22 of 33 steps passed against Atlas and the emulator (see `verify.md`). Marked done with one known issue: "Descargar" offline returns to the full screen "No hay conexión" because the foreground session refresh fails (`src/providers/auth-provider.tsx`), so the message under the button never shows. Not run (need writes to Atlas or hands on work): range edges, pending count, inactive volunteer with hours, paging past 50, the 429 limit, the server log line, Excel, Drive/Gmail delivery, sign out on a server side 401
 
 ## 7. Staff management + audit log viewer
 

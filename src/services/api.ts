@@ -66,6 +66,33 @@ export async function apiRequest(path: string, options: RequestOptions = {}): Pr
   } finally { clearTimeout(timeout); }
 }
 
+// Fetches a file (a CSV report) as text. Uses fetch instead of a download helper so the status and
+// the JSON error body can be read, and every failure still becomes a plain sentence.
+export async function apiDownload(path: string): Promise<string> {
+  const base = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (!base || !/^https?:\/\//.test(base)) throw new ApiError('El servicio no está disponible por el momento.');
+  const token = await readSession();
+  if (!token) throw new ApiError(sessionEnded, 401);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch(`${base.replace(/\/+$/, '')}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+    if (response.ok) return await response.text();
+    if (response.status === 401) throw new ApiError(sessionEnded, 401);
+    const body: unknown = await response.json().catch(() => null);
+    if ([400, 403, 429].includes(response.status)) {
+      throw new ApiError(serverMessage(body) ?? 'No pudimos generar el archivo. Inténtalo de nuevo en unos minutos.', response.status, {}, body);
+    }
+    throw new ApiError('No pudimos generar el archivo. Inténtalo de nuevo en unos minutos.', response.status);
+  } catch (error: unknown) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError('No hay conexión con el servidor. Revisa tu internet y vuelve a intentarlo.');
+  } finally { clearTimeout(timeout); }
+}
+
 export function apiMessage(error: unknown, fallback = 'Ocurrió un problema. Inténtalo de nuevo.'): string {
   return error instanceof ApiError ? error.message : fallback;
 }

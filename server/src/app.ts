@@ -7,6 +7,7 @@ import { attendanceRouter } from './attendance.js';
 import { authRouter } from './auth.js';
 import type { V2Collections } from './collections.js';
 import { log } from './logger.js';
+import { reportsRouter } from './reports.js';
 import { staffRouter } from './staff.js';
 import { volunteersRouter } from './volunteers.js';
 
@@ -34,6 +35,7 @@ export function createApp(database: Db, collections: V2Collections) {
   app.use('/api/activities', activitiesRouter(collections, database.client));
   app.use('/api/activities', attendanceRouter(collections, database.client));
   app.use('/api/staff', staffRouter(collections));
+  app.use('/api/reports', reportsRouter(collections));
 
   app.use((_request, response) => {
     response.status(404).json({ message: 'No encontramos la ruta solicitada.' });

@@ -245,6 +245,8 @@ export default function ActivityDetailScreen() {
   // Recording also needs the activity to have started; before that the API refuses it.
   const canRecord = step === 'attendance' && canRecordOn(detail, viewer);
   const canCorrect = finalized && roleCan.correctAttendance(user.role);
+  // A scan records the time it happens, so the scanner only makes sense until the activity ends.
+  const canScan = canRecord && new Date(activity.endsAt) > new Date();
   // Before the start time, the same people can open attendance early ("Iniciar asistencia").
   const canStart = step === 'published' && canRecordOn(detail, viewer) && assigned.length > 0;
   const showFinalizeBar = currentTab === 'asistencia' && canRecord && assigned.length > 0;
@@ -452,6 +454,11 @@ export default function ActivityDetailScreen() {
               { value: 'all', label: `Todos · ${assigned.length}` },
               { value: 'unrecorded', label: `Sin registrar · ${unrecorded}` },
             ]} />
+            {canScan ? (
+              <Button testID="attendance-scan" label="Escanear" variant="secondary" disabled={locked}
+                icon={{ ios: 'qrcode.viewfinder', android: 'qr_code_scanner' }}
+                onPress={() => router.push({ pathname: '/escanear/[id]', params: { id: activity.id } })} />
+            ) : null}
           </View>
         )}
 

@@ -18,6 +18,8 @@ export interface Volunteer extends VolunteerSummary {
   emergencyContactName: string;
   emergencyContactPhone: string;
   notes: string | null;
+  // What the volunteer's QR encodes; null until one is issued.
+  checkinToken: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -53,7 +55,7 @@ function isSummary(value: unknown): value is VolunteerSummary {
 
 function isVolunteer(value: unknown): value is Volunteer {
   return isSummary(value) && isRecord(value) && strOrNull(value.birthDate) && str(value.emergencyContactName)
-    && str(value.emergencyContactPhone) && strOrNull(value.notes) && str(value.createdAt) && str(value.updatedAt);
+    && str(value.emergencyContactPhone) && strOrNull(value.notes) && strOrNull(value.checkinToken) && str(value.createdAt) && str(value.updatedAt);
 }
 
 function volunteerFrom(result: unknown): Volunteer {
@@ -92,4 +94,8 @@ export async function updateVolunteer(id: string, payload: Payload): Promise<Vol
 
 export async function setVolunteerStatus(id: string, status: VolunteerStatus): Promise<Volunteer> {
   return volunteerFrom(await apiRequest(`/api/volunteers/${encodeURIComponent(id)}/status`, { method: 'POST', body: { status } }));
+}
+
+export async function regenerateCheckinToken(id: string): Promise<Volunteer> {
+  return volunteerFrom(await apiRequest(`/api/volunteers/${encodeURIComponent(id)}/checkin-token`, { method: 'POST' }));
 }

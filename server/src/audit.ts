@@ -3,8 +3,9 @@ import type { ClientSession, Document } from 'mongodb';
 import type { AuditAction, V2Collections } from './collections.js';
 
 // Never copied into an audit snapshot: credentials and live sessions must not spread to a second place,
-// and the lock fields are internal concurrency bookkeeping, not a change anyone made.
-const secretFields = new Set(['passwordHash', 'sessions', 'assignmentLock', 'attendanceLock']);
+// the lock fields are internal concurrency bookkeeping, not a change anyone made, and a volunteer's
+// check in token lives only on their record (checkinTokenIssuedAt shows when it changed).
+const secretFields = new Set(['passwordHash', 'sessions', 'assignmentLock', 'attendanceLock', 'checkinToken']);
 
 function snapshot(record: Document | null | undefined): Document | undefined {
   if (!record) return undefined;

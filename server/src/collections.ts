@@ -35,6 +35,11 @@ export interface Volunteer {
   notes?: string;
   // Internal: rewritten in every assignment transaction so two of them for the same person collide.
   assignmentLock?: ObjectId;
+  // Random code the volunteer's QR holds (see checkin-token.ts). Only the detail endpoints return it;
+  // it is kept out of lists, logs and audit snapshots. Missing until issued or backfilled.
+  checkinToken?: string;
+  // When the current token was issued; this is what audit snapshots show change, never the token itself.
+  checkinTokenIssuedAt?: Date;
   createdBy: ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -95,6 +100,8 @@ export interface Attendance {
   correctionReason?: string;
   correctedAt?: Date;
   correctedBy?: ObjectId;
+  // How the last write came in: a QR scan or by hand. Missing reads as 'manual'.
+  method?: 'qr' | 'manual';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -173,6 +180,8 @@ const definitions: CollectionDefinition[] = [
           status: { enum: ['active', 'inactive'] },
           notes: text(1000, 0),
           assignmentLock: objectId,
+          checkinToken: { bsonType: 'string', pattern: '^[A-Za-z0-9_-]{32}$' },
+          checkinTokenIssuedAt: date,
           createdBy: objectId,
           ...timestamps,
         },
@@ -182,6 +191,8 @@ const definitions: CollectionDefinition[] = [
       // Email is optional, so uniqueness only applies to documents that have one.
       { key: { email: 1 }, name: 'volunteers_email_unique', unique: true, partialFilterExpression: { email: { $type: 'string' } } },
       { key: { status: 1, lastName: 1, firstName: 1 }, name: 'volunteers_status_name' },
+      // Volunteers created before QR check in have no token until the backfill runs.
+      { key: { checkinToken: 1 }, name: 'volunteers_checkin_token_unique', unique: true, partialFilterExpression: { checkinToken: { $type: 'string' } } },
     ],
   },
   {
@@ -257,6 +268,7 @@ const definitions: CollectionDefinition[] = [
           correctionReason: text(500, 3),
           correctedAt: date,
           correctedBy: objectId,
+          method: { enum: ['qr', 'manual'] },
           ...timestamps,
         },
       },

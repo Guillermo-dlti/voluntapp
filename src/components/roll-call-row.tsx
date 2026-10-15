@@ -43,7 +43,7 @@ export function RollCallRow({ entry, recording, busy, locked, error, onChoose, o
       <View style={styles.text}>
         <Text style={styles.name} numberOfLines={largeText ? undefined : 1}>{name}</Text>
         <Text style={styles.detail}>
-          {record ? `${hoursText(record.hours)} h${record.correctionReason ? ' · corregido' : ''}` : 'Sin registrar'}
+          {record ? `${hoursText(record.hours)} h${record.method === 'qr' ? ' · QR' : ''}${record.correctionReason ? ' · corregido' : ''}` : 'Sin registrar'}
         </Text>
       </View>
       {/* While recording, the selected button already says the status; the pill is for read-only rows. */}

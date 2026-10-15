@@ -70,6 +70,7 @@ function SessionNavigation() {
       </Stack.Protected>
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="escanear/[id]" options={{ presentation: 'fullScreenModal' }} />
       </Stack.Protected>
     </Stack>
   );

@@ -39,6 +39,7 @@ The one path the MVP has to walk end to end:
 | 6 | Reports + CSV export | done (spec 0006) |
 | 7 | Staff management + audit log viewer | not started |
 | 8 | Hardening | not started |
+| 9 | QR check in | in-progress (spec 0009) |
 
 ## 0. Stack decision + foundation
 
@@ -248,7 +249,21 @@ Spec: [`docs/specs/0006-reports-csv-export/index.md`](docs/specs/0006-reports-cs
 - [ ] Tests for the business rules: capacity race, overlap, assigning a closed activity or an inactive volunteer, hours over the duration, a non-admin editing finalized attendance
 - [ ] Check that no endpoint hard deletes and none returns `passwordHash`
 - [ ] Review the logs for personal data
+- [ ] Revert the test password: the three `@bamx.test` accounts on Atlas were set to `123` on 2026-10-15 for phone testing (and `SEED_STAFF_PASSWORD=123` in `.env`). Set a 15+ character password on them again before grading
 - [ ] Atlas custom role for the API's database user: no `update`/`remove` on `audit_log`, no `dropCollection` (makes insert only true in the database, not just the API)
+
+## 9. QR check in
+
+Spec: [`docs/specs/0009-qr-check-in/index.md`](docs/specs/0009-qr-check-in/index.md) (decisions approved 2026-10-15). Branch: `feature/qr-checkin`. Each volunteer gets a random check in token shown as a QR on their detail screen; staff scan it from the Asistencia tab to mark the volunteer present or late, through the same attendance gate, permissions and audit as the roll call. Demoed in Expo Go on a real phone. Done when: a coordinator scans the seeded cards on a phone and the roll call shows the records, with every refusal answering in plain Spanish.
+
+- [x] Design it (spec)
+- [x] Build it: `/develop` QR check in (code in `server/src/attendance.ts`, `server/src/checkin-token.ts`, `src/app/escanear/`, `src/components/volunteer-qr-card.tsx`)
+  - [x] Token on volunteers (create paths, validator and index, detail only, kept out of logs and audit) and the QR card on the volunteer detail (AC-1, AC-2)
+  - [x] Check in endpoint with outcomes, counts, rate limit, and `attendance.method` on every attendance write (AC-5 to AC-12, AC-14)
+  - [x] Scanner screen in Expo Go: camera permission, debounce, banner, count, torch, "Escanear" on Asistencia (AC-9, AC-13)
+  - [x] Regenerate QR and the backfill script (AC-3, AC-4). Backfill ran on Atlas 2026-10-15 (12 volunteers).
+  - [x] Demo setup: `server:seed:qr` with `demo-qr.html`, LAN instructions in `server/README.md`, Expo Go version alignment (AC-15)
+- [ ] Verify it: `/check verify` QR check in (API checks against Atlas, then a real phone in Expo Go as coordinator and supervisor)
 
 ## v1 code (kept, not deleted)
 
@@ -289,7 +304,6 @@ Not in the v2 MVP. Kept here so the ideas aren't lost.
 
 - Volunteer self sign-up (built in v1, see above)
 - Volunteers browsing and signing up for shifts (mock in v1)
-- QR check-in (mock in v1)
 - Notifications and reminders (never built)
 - Volunteer impact screen: hours, services, kg distributed (mock in v1)
 - Volunteer profile editing, password recovery

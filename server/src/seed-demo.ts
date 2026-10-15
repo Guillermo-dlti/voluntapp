@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { writeAudit } from './audit.js';
+import { newCheckinToken } from './checkin-token.js';
 import type { Activity, Assignment, Attendance, Volunteer } from './collections.js';
 import { addDays, mexicoDayStart, mexicoParts } from './common.js';
 import { loadConfig } from './config.js';
@@ -122,7 +123,7 @@ async function seedDemo() {
         _id: new ObjectId(), firstName: seed.firstName, lastName: seed.lastName, phone: seed.phone,
         ...(seed.email ? { email: seed.email } : {}), ...(seed.birth ? { birthDate: new Date(`${seed.birth}T12:00:00Z`) } : {}),
         emergencyContactName: seed.contact, emergencyContactPhone: seed.contactPhone, status: seed.inactive ? 'inactive' : 'active',
-        ...(seed.notes ? { notes: seed.notes } : {}), createdBy: index % 3 === 0 ? admin : coordinator, createdAt: created, updatedAt: created,
+        ...(seed.notes ? { notes: seed.notes } : {}), checkinToken: newCheckinToken(), checkinTokenIssuedAt: created, createdBy: index % 3 === 0 ? admin : coordinator, createdAt: created, updatedAt: created,
       };
       await volunteers.insertOne(doc);
       await writeAudit(collections, { actorId: doc.createdBy, action: 'insert', collection: 'volunteers', recordId: doc._id, after: doc });

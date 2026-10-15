@@ -3,6 +3,7 @@ import { ObjectId, type Filter, type MongoClient } from 'mongodb';
 import { z } from 'zod';
 import { writeAudit } from './audit.js';
 import type { V2Collections, Volunteer } from './collections.js';
+import { newCheckinToken } from './checkin-token.js';
 import { inTransaction, isDuplicate, parseId, searchPattern, searchWords } from './common.js';
 import { log } from './logger.js';
 import { currentStaff, requireStaff } from './session.js';
@@ -84,7 +85,8 @@ function invalid(response: Response, error: z.ZodError) {
 const notFound = { message: 'No encontramos a ese voluntario. Puede que el enlace ya no sea válido.' };
 const duplicateEmail = { message: 'Ya hay un voluntario registrado con ese correo.', fields: { email: 'Este correo ya está registrado con otro voluntario.' } };
 
-// Explicit fields so nothing unexpected is ever sent to the app.
+// Explicit fields so nothing unexpected is ever sent to the app. Only single record responses use it,
+// which is what keeps the check in token out of the list.
 function publicVolunteer(volunteer: Volunteer) {
   return {
     id: volunteer._id.toHexString(),
@@ -97,6 +99,7 @@ function publicVolunteer(volunteer: Volunteer) {
     emergencyContactPhone: volunteer.emergencyContactPhone,
     status: volunteer.status,
     notes: volunteer.notes ?? null,
+    checkinToken: volunteer.checkinToken ?? null,
     createdAt: volunteer.createdAt.toISOString(),
     updatedAt: volunteer.updatedAt.toISOString(),
   };
@@ -166,6 +169,8 @@ export function volunteersRouter(collections: V2Collections, client: MongoClient
       ...(input.birthDate ? { birthDate: new Date(`${input.birthDate}T00:00:00Z`) } : {}),
       ...(input.notes ? { notes: input.notes } : {}),
       status: 'active',
+      checkinToken: newCheckinToken(),
+      checkinTokenIssuedAt: now,
       createdBy: staff.id,
       createdAt: now,
       updatedAt: now,
@@ -294,6 +299,29 @@ export function volunteersRouter(collections: V2Collections, client: MongoClient
     if (!result) { response.status(404).json(notFound); return; }
     log.info('volunteer_status_changed', { volunteerId: id.toHexString(), status, staffId: staff.id.toHexString() });
     response.json({ volunteer: publicVolunteer(result) });
+  });
+
+  // Issues a new check in token (a lost card, or a volunteer from before QR check in). The old one stops
+  // matching anyone at once. The audit entry shows checkinTokenIssuedAt changing; the token stays out of it.
+  router.post('/:id/checkin-token', requireStaff(staffUsers, 'volunteers.write'), async (request, response) => {
+    const id = parseId(request.params.id);
+    if (!id) { response.status(404).json(notFound); return; }
+    const staff = currentStaff(response);
+    const updated = await transaction(async (session) => {
+      const before = await volunteers.findOne({ _id: id }, { session });
+      if (!before) return null;
+      const now = new Date();
+      const after = await volunteers.findOneAndUpdate(
+        { _id: id },
+        { $set: { checkinToken: newCheckinToken(), checkinTokenIssuedAt: now, updatedAt: now } },
+        { session, returnDocument: 'after' },
+      );
+      await writeAudit(collections, { actorId: staff.id, action: 'update', collection: 'volunteers', recordId: id, before, after }, session);
+      return after;
+    });
+    if (!updated) { response.status(404).json(notFound); return; }
+    log.info('volunteer_checkin_token_issued', { volunteerId: id.toHexString(), staffId: staff.id.toHexString() });
+    response.json({ volunteer: publicVolunteer(updated) });
   });
 
   return router;

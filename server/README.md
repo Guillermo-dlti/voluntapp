@@ -97,6 +97,61 @@ npm run android        # la primera vez compila el development build
 
 Después de la primera compilación basta con `npx expo start --dev-client`.
 
+Después de agregar `expo-camera` (escaneo QR) hay que volver a compilar el
+development build con `npm run android` una vez.
+
+## Demostración del escaneo QR en un teléfono (Expo Go)
+
+Para mostrar el registro de asistencia con QR en un teléfono real (Android, o
+iPhone si Expo Go de la App Store ya está en SDK 57; en iPhone los campos de
+fecha y hora no funcionan), sin compilar nada. El teléfono y la laptop deben
+estar en la misma red Wi‑Fi.
+
+1. Prepara los datos y abre los códigos:
+
+   ```bash
+   npm run server:seed:qr    # no borra nada
+   open server/demo-qr.html  # o ábrelo con doble clic
+   ```
+
+   Crea (o reutiliza) la actividad «Demo · Escaneo de QR», que empieza en
+   10 minutos con la asistencia ya iniciada y supervisada por
+   `supervisor@bamx.test`, con 4 voluntarios asignados. La página muestra sus
+   4 códigos, uno de un voluntario activo sin lugar en la actividad y uno
+   falso. **Tiene nombres y códigos que funcionan: bórrala al terminar.**
+2. Arranca todo con un solo comando:
+
+   ```bash
+   npm run phone
+   ```
+
+   Busca la IP de la laptop, arranca la API abierta a la red (`HOST=0.0.0.0`)
+   y Expo en modo Expo Go apuntando a `http://<tu IP>:3000`. Esa dirección va en
+   un `.env.development.local` temporal (Expo lo lee antes que `.env` y
+   `.env.local`), así que tus otros archivos `.env` no cambian y no hay que
+   editarlos al cambiar de red. `Ctrl+C` detiene las dos y borra ese archivo.
+3. Escanea el QR de la terminal (iPhone: con la cámara; Android: con Expo Go),
+   entra como `coordinador@bamx.test` o `supervisor@bamx.test`, abre la
+   actividad → Asistencia → «Escanear» y apunta a la pantalla de la laptop.
+   Si Expo Go pide iniciar sesión, usa la misma cuenta de Expo que la terminal
+   (`npx expo whoami`). En iPhone, permite «Red local» a Expo Go.
+
+Si el teléfono no conecta: revisa que la IP sea la actual, que el firewall de
+la laptop permita el puerto 3000 y que la red no aísle a los equipos entre sí
+(algunas redes de escuela lo hacen; un hotspot del teléfono sirve).
+
+### Códigos QR de voluntarios creados antes
+
+Los voluntarios registrados antes de esta función no tienen código. Una sola
+vez por base de datos, con una cuenta de administración activa:
+
+```bash
+npm run server:backfill:checkin -- --actor admin@bamx.test
+```
+
+Escribe una entrada de bitácora por voluntario. Si se corre de nuevo no cambia
+nada.
+
 ## Comprobaciones de código
 
 ```bash

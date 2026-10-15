@@ -8,6 +8,7 @@ import { Row, Section } from '@/components/grouped-list';
 import { Screen } from '@/components/screen';
 import { StatCard } from '@/components/stat-card';
 import { StatusBadge, type BadgeTone } from '@/components/status-badge';
+import { VolunteerQrCard } from '@/components/volunteer-qr-card';
 import { SkeletonVolunteerDetail } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
 import { useLargeText } from '@/hooks/use-large-text';
@@ -126,6 +127,11 @@ export default function VolunteerDetailScreen() {
         <Row icon={{ ios: 'person', android: 'person' }} label={volunteer.emergencyContactName}
           value={formatPhone(volunteer.emergencyContactPhone)}
           onPress={() => void Linking.openURL(`tel:${volunteer.emergencyContactPhone}`)} />
+      </Section>
+
+      <Section title="Código de asistencia" bare>
+        <VolunteerQrCard volunteer={volunteer} canRegenerate={canEdit}
+          onChanged={(next) => setDetail((current) => (current ? { ...current, volunteer: next } : current))} />
       </Section>
 
       {volunteer.notes ? (

@@ -40,7 +40,16 @@
       ],
       "expo-font",
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "VoluntApp usa la cámara para escanear tarjetas de voluntarios",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

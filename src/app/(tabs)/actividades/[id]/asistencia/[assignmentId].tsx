@@ -11,7 +11,7 @@ import { Screen } from '@/components/screen';
 import { TimeField } from '@/components/time-field';
 import { SkeletonForm } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
@@ -178,11 +178,11 @@ const styles = StyleSheet.create({
   block: { gap: 16 },
   form: { gap: 24 },
   group: { gap: 8 },
-  groupTitle: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.textSecondary, paddingHorizontal: 4 },
+  groupTitle: { ...Type.calloutStrong, color: Brand.textSecondary, paddingHorizontal: 4 },
   groupBody: { gap: 16 },
-  hint: { fontFamily: AppFonts.body, color: Brand.textSecondary, fontSize: 13, paddingHorizontal: 4 },
-  fieldError: { fontFamily: AppFonts.body, color: Brand.dangerText, fontSize: 13, paddingHorizontal: 4 },
+  hint: { ...Type.footnote, color: Brand.textSecondary, paddingHorizontal: 4 },
+  fieldError: { ...Type.footnote, color: Brand.dangerText, paddingHorizontal: 4 },
   multiline: { minHeight: 100, paddingTop: 14 },
   alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
-  alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
+  alertText: { ...Type.callout, color: Brand.dangerText },
 });

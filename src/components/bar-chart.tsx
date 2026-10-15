@@ -4,7 +4,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { useLargeText } from '@/hooks/use-large-text';
 
 import { badgeColors, type BadgeTone } from '@/components/status-badge';
-import { AppFonts, Brand } from '@/constants/theme';
+import { Brand, Type } from '@/constants/theme';
 
 // Plain views with percent widths: two simple charts don't justify a chart library and a native module.
 
@@ -89,8 +89,8 @@ const styles = StyleSheet.create({
   bars: { gap: 2 },
   barRow: { minHeight: 48, justifyContent: 'center', gap: 6, paddingVertical: 6, borderRadius: 8 },
   barHead: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
-  barLabel: { flex: 1, fontFamily: AppFonts.body, fontSize: 15, color: Brand.text },
-  barValue: { fontFamily: AppFonts.headingSemiBold, fontSize: 15, color: Brand.text },
+  barLabel: { flex: 1, ...Type.body, color: Brand.text },
+  barValue: { ...Type.bodyStrong, color: Brand.text },
   track: { height: 6, borderRadius: 3, backgroundColor: Brand.surfaceMuted, overflow: 'hidden' },
   fill: { height: 6, minWidth: MIN_BAR, borderRadius: 3, backgroundColor: Brand.primary },
   stack: { gap: 12 },
@@ -100,5 +100,5 @@ const styles = StyleSheet.create({
   legend: { gap: 6 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },
+  legendText: { ...Type.callout, color: Brand.textSecondary },
 });

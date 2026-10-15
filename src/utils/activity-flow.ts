@@ -119,16 +119,30 @@ export function nextStep(detail: ActivityDetail, viewer: Viewer, now = new Date(
 }
 
 export type HintTone = 'neutral' | 'full' | 'attention';
+export type StepTone = 'success' | 'neutral' | 'attention' | 'critical';
 
-// One line under each row of the Actividades list saying what the activity needs next.
+// The pill for an activity, from its step rather than its stored status, so a list row and the detail
+// band never say "Publicada" while the activity is waiting on attendance.
+export function stepBadge(activity: Timing, now = new Date()): { label: string; tone: StepTone } {
+  const step = activityStep(activity, now);
+  if (step === 'cancelled') return { label: 'Cancelada', tone: 'critical' };
+  if (step === 'finalized') return { label: 'Finalizada', tone: 'neutral' };
+  if (step === 'attendance') return { label: 'Por finalizar', tone: 'attention' };
+  if (step === 'draft') return { label: 'Borrador', tone: 'attention' };
+  return activity.status === 'closed' ? { label: 'Inscripciones cerradas', tone: 'neutral' } : { label: 'Publicada', tone: 'success' };
+}
+
+// The one fact a list row adds next to its pill: how full it is, or that it is full. The pill already
+// says the step, so the row never repeats it (and never shows both "6/10" and "faltan 4").
 export function listHint(activity: ActivitySummary, now = new Date()): { text: string; tone: HintTone } | null {
   const step = activityStep(activity, now);
   if (step === 'cancelled') return null;
-  if (step === 'draft') return { text: 'Borrador: falta publicar', tone: 'neutral' };
-  if (step === 'finalized') return { text: 'Asistencia finalizada', tone: 'neutral' };
-  if (step === 'attendance') return { text: 'Asistencia por finalizar', tone: 'attention' };
-  if (activity.status !== 'open') return null;
-  const free = activity.capacity - activity.assignedCount;
-  if (free <= 0) return { text: 'Cupo lleno', tone: 'full' };
-  return { text: free === 1 ? 'Falta 1 lugar' : `Faltan ${free} lugares`, tone: 'neutral' };
+  if (step === 'draft') return { text: `Cupo de ${activity.capacity}`, tone: 'neutral' };
+  if (step === 'published' && activity.status === 'open' && activity.assignedCount >= activity.capacity) {
+    return { text: 'Cupo lleno', tone: 'full' };
+  }
+  if (step === 'published' && activity.status === 'open') {
+    return { text: `${activity.assignedCount} de ${activity.capacity} asignados`, tone: 'neutral' };
+  }
+  return { text: activity.assignedCount === 1 ? '1 asignado' : `${activity.assignedCount} asignados`, tone: step === 'attendance' ? 'attention' : 'neutral' };
 }

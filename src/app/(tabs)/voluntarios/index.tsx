@@ -1,9 +1,8 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { Fab } from '@/components/fab';
 import { FilterChips } from '@/components/filter-chips';
@@ -13,7 +12,7 @@ import { SearchField } from '@/components/search-field';
 import { StatusBadge } from '@/components/status-badge';
 import { SkeletonList } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
-import { AppFonts, Brand } from '@/constants/theme';
+import { Brand, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { listVolunteers, type StatusFilter, type VolunteerSummary } from '@/services/volunteers';
@@ -104,12 +103,10 @@ export default function VolunteersScreen() {
       {state === 'loading' ? (
         <SkeletonList variant="person" rows={6} label="Cargando voluntarios…" />
       ) : state === 'error' ? (
-        <View style={styles.errorBlock}>
-          <EmptyState icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar la lista" body={message} />
-          <Button label="Reintentar" variant="secondary" onPress={() => { setState('loading'); void load(1); }} />
-        </View>
+        <EmptyState bare icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar la lista" body={message}
+          action={{ label: 'Reintentar', onPress: () => { setState('loading'); void load(1); } }} />
       ) : items.length === 0 ? (
-        <EmptyState testID="volunteers-empty"
+        <EmptyState bare testID="volunteers-empty"
           icon={searching ? { ios: 'magnifyingglass', android: 'search_off' } : { ios: 'person.2', android: 'group' }}
           title={searching ? 'Sin resultados' : status === 'inactive' ? 'No hay voluntarios inactivos' : 'Todavía no hay voluntarios'}
           body={searching
@@ -118,7 +115,8 @@ export default function VolunteersScreen() {
               ? 'Cuando desactives a alguien, aparecerá aquí con su historial completo.'
               : canEdit ? 'Registra a la primera persona con el botón “Nuevo voluntario”.' : 'Cuando Coordinación registre voluntarios, aparecerán aquí.'} />
       ) : (
-        <Section title={searching ? 'Resultados' : undefined}>
+        <Section inset="avatar" title={searching ? 'Resultados' : statusOptions.find((option) => option.value === status)?.label}
+          count={`${items.length}${hasMore ? '+' : ''}`}>
           {items.map((volunteer) => (
             <Row key={volunteer.id} testID={`volunteer-row-${volunteer.id}`}
               leading={<Avatar name={`${volunteer.firstName} ${volunteer.lastName}`} />}
@@ -136,6 +134,5 @@ export default function VolunteersScreen() {
 }
 
 const styles = StyleSheet.create({
-  muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
-  errorBlock: { gap: 16 },
+  muted: { ...Type.callout, color: Brand.textSecondary, textAlign: 'center' },
 });

@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 
 interface FilterChipsProps<T extends string> {
   options: readonly { value: T; label: string }[];
@@ -12,10 +12,11 @@ interface FilterChipsProps<T extends string> {
   testID?: string;
 }
 
-// Single-choice filter row (Activos, Inactivos, Todos). Scrolls sideways if the labels don't fit.
+// Single-choice filter row (Activos, Inactivos, Todos). Scrolls sideways if the labels don't fit, out
+// to the screen edge rather than stopping at the gutter, so a cut-off chip reads as "there's more".
 export function FilterChips<T extends string>({ options, value, onChange, onDark = false, testID }: FilterChipsProps<T>) {
   return (
-    <ScrollView testID={testID} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}
+    <ScrollView testID={testID} horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.row}
       accessibilityRole="tablist">
       {options.map((option) => {
         const selected = option.value === value;
@@ -34,18 +35,20 @@ export function FilterChips<T extends string>({ options, value, onChange, onDark
 }
 
 const styles = StyleSheet.create({
-  row: { gap: 8 },
+  // Every screen pads its band and sheet by the gutter; the row steps out of it and pads itself instead.
+  bleed: { marginHorizontal: -Spacing.gutter, flexGrow: 0 },
+  row: { gap: Spacing.sm, paddingHorizontal: Spacing.gutter },
   chip: {
     minHeight: 36,
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     borderRadius: Radius.pill,
     borderWidth: 1,
     borderColor: Brand.border,
     backgroundColor: Brand.surface,
   },
   selected: { backgroundColor: Brand.forest, borderColor: Brand.forest },
-  label: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.textSecondary },
+  label: { ...Type.calloutStrong, color: Brand.textSecondary },
   selectedLabel: { color: Brand.forestText },
   chipDark: { backgroundColor: 'transparent', borderColor: Brand.forestMuted },
   labelDark: { color: Brand.forestText },

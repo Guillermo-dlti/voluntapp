@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, View } from '
 
 import { Button } from '@/components/button';
 import { FormField } from '@/components/form-field';
-import { AppFonts, Brand, Elevation, Radius } from '@/constants/theme';
+import { Brand, Elevation, Radius, Type } from '@/constants/theme';
 
 interface ReasonDialogProps {
   visible: boolean;
@@ -69,8 +69,8 @@ export function ReasonDialog({ visible, title, body, confirmLabel, busyLabel, on
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'center', padding: 16, backgroundColor: Brand.scrim },
   sheet: { gap: 16, padding: 20, borderRadius: Radius.card, backgroundColor: Brand.surface, boxShadow: Elevation.raised },
-  title: { fontFamily: AppFonts.heading, fontSize: 20, color: Brand.text },
-  body: { fontFamily: AppFonts.body, fontSize: 15, lineHeight: 21, color: Brand.textSecondary },
+  title: { ...Type.headline, color: Brand.text },
+  body: { ...Type.body, color: Brand.textSecondary },
   reason: { minHeight: 90, paddingTop: 14 },
   actions: { flexDirection: 'row', gap: 12 },
   action: { flex: 1 },

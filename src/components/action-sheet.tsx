@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand, Elevation, Radius } from '@/constants/theme';
+import { Brand, Elevation, Radius, Type } from '@/constants/theme';
 import { useMotion } from '@/utils/motion';
 
 export interface SheetAction {
@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
   },
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: Brand.border },
   heading: { gap: 4, paddingHorizontal: 4 },
-  title: { fontFamily: AppFonts.heading, fontSize: 20, color: Brand.text },
-  subtitle: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },
+  title: { ...Type.headline, color: Brand.text },
+  subtitle: { ...Type.callout, color: Brand.textSecondary },
   list: { borderRadius: Radius.card, borderWidth: 1, borderColor: Brand.border, overflow: 'hidden' },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.border, marginLeft: 64 },
   row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10 },
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   iconWellCritical: { backgroundColor: Brand.dangerLight },
   disabled: { opacity: 0.5 },
   text: { flex: 1, gap: 2 },
-  detail: { fontFamily: AppFonts.body, fontSize: 13, lineHeight: 18, color: Brand.textSecondary },
-  label: { fontFamily: AppFonts.body, fontSize: 16, color: Brand.text },
+  detail: { ...Type.footnote, color: Brand.textSecondary },
+  label: { ...Type.body, color: Brand.text },
   labelCritical: { color: Brand.danger },
 });

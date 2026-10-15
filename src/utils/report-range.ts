@@ -40,8 +40,17 @@ export function rangeErrors({ from, to }: ReportRange): Partial<Record<keyof Rep
   return errors;
 }
 
+const rangeDay = (date: string, withYear: boolean) => new Intl.DateTimeFormat('es-MX', {
+  day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'UTC',
+}).format(new Date(`${date}T00:00:00Z`)).replace('.', '');
+
+// The period as short as it reads clearly: "1–31 oct 2026", "1 oct – 15 nov 2026",
+// "1 dic 2025 – 15 ene 2026", or one day in full.
 export function rangeLabel({ from, to }: ReportRange): string {
-  return from === to ? formatDate(from) : `${formatDate(from)} al ${formatDate(to)}`;
+  if (from === to) return formatDate(from);
+  const sameYear = from.slice(0, 4) === to.slice(0, 4);
+  if (sameYear && from.slice(5, 7) === to.slice(5, 7)) return `${Number(from.slice(8, 10))}–${rangeDay(to, true)}`;
+  return `${rangeDay(from, !sameYear)} – ${rangeDay(to, true)}`;
 }
 
 // The number alone, up to 2 decimals, es-MX style ("12.5").

@@ -15,7 +15,7 @@ import { Icon } from '@/components/icon';
 import { attendanceTones } from '@/components/roll-call-row';
 import { Screen } from '@/components/screen';
 import { SkeletonReport } from '@/components/skeleton';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 import { useReportExport } from '@/hooks/use-report-export';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
@@ -24,7 +24,7 @@ import {
   type ReportKind, type ReportPage, type ReportSummary, type VolunteerHoursRow,
 } from '@/services/reports';
 import {
-  formatHours, plural, presetRange, rangeErrors, rangeLabel, type RangePreset, type ReportRange,
+  formatHours, formatHoursNumber, plural, presetRange, rangeErrors, rangeLabel, type RangePreset, type ReportRange,
 } from '@/utils/report-range';
 import { todayInMexico } from '@/utils/time';
 
@@ -133,10 +133,8 @@ export default function ReportsScreen() {
       ) : null}
 
       {!valid ? null : state === 'error' ? (
-        <View style={styles.errorBlock}>
-          <EmptyState icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar el reporte" body={message} />
-          <Button label="Reintentar" variant="secondary" onPress={() => { setState('loading'); void load(); }} />
-        </View>
+        <EmptyState bare icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar el reporte" body={message}
+          action={{ label: 'Reintentar', onPress: () => { setState('loading'); void load(); } }} />
       ) : state === 'loading' || !data ? (
         <SkeletonReport />
       ) : (
@@ -155,8 +153,8 @@ export default function ReportsScreen() {
           {data.summary.activitiesHeld === 0 ? (
             <>
               <EmptyState testID="reports-empty" icon={{ ios: 'chart.bar', android: 'bar_chart' }}
-                title="No hay actividades finalizadas en este periodo"
-                body="Los reportes solo cuentan asistencia finalizada. Cuando se finalice la asistencia de una actividad de este periodo, sus horas aparecerán aquí." />
+                title="Nada finalizado en este periodo"
+                body="Los reportes solo cuentan asistencia finalizada. Las horas aparecen aquí al finalizarla." />
               <DownloadCard range={range} volunteers={data.volunteers.total} activities={data.summary.activitiesHeld} />
             </>
           ) : (
@@ -164,9 +162,7 @@ export default function ReportsScreen() {
               <SummarySection summary={data.summary} top={data.volunteers.rows}
                 onOpenVolunteer={(id) => router.push({ pathname: '/voluntarios/[id]', params: { id } })} />
 
-              <DownloadCard range={range} volunteers={data.volunteers.total} activities={data.summary.activitiesHeld} />
-
-              <Section title="Ver detalle">
+              <Section title="Ver detalle" inset="icon">
                 <Row testID="reports-volunteers-all" icon={{ ios: 'person.2', android: 'group' }}
                   label="Horas por voluntario" note={plural(data.volunteers.total, 'voluntario', 'voluntarios')}
                   onPress={() => openList('/reportes/voluntarios')} />
@@ -174,6 +170,8 @@ export default function ReportsScreen() {
                   label="Asistencia por actividad" note={plural(data.summary.activitiesHeld, 'actividad', 'actividades')}
                   onPress={() => openList('/reportes/actividades')} />
               </Section>
+
+              <DownloadCard range={range} volunteers={data.volunteers.total} activities={data.summary.activitiesHeld} />
             </>
           )}
         </>
@@ -193,9 +191,17 @@ function SummarySection({ summary, top, onOpenVolunteer }: {
       <Card testID="reports-summary">
         <View style={styles.summary}>
           {/* The period's totals in one quiet line; the big numbers for this month live on Inicio. */}
-          <View style={styles.totalsBlock}>
-            <Text testID="reports-totals" style={styles.totals}>
-              {`${formatHours(summary.totalHours)} · ${plural(summary.volunteersParticipated, 'voluntario', 'voluntarios')} · ${plural(summary.activitiesHeld, 'actividad', 'actividades')}`}
+          {/* The period's hours lead as one big number (after Flighty's "12 total aircraft"); people and
+              activities follow in one line under it. */}
+          <View testID="reports-totals" accessible
+            accessibilityLabel={`${formatHours(summary.totalHours)}, ${plural(summary.volunteersParticipated, 'voluntario', 'voluntarios')}, ${plural(summary.activitiesHeld, 'actividad', 'actividades')}`}
+            style={styles.totalsBlock}>
+            <View style={styles.headlineRow}>
+              <Text style={styles.headline}>{formatHoursNumber(summary.totalHours)}</Text>
+              <Text style={styles.headlineUnit}>{summary.totalHours === 1 ? 'hora' : 'horas'}</Text>
+            </View>
+            <Text style={styles.totals}>
+              {`${plural(summary.volunteersParticipated, 'voluntario', 'voluntarios')} · ${plural(summary.activitiesHeld, 'actividad', 'actividades')}`}
             </Text>
             <Text style={styles.totalsNote}>Solo cuenta la asistencia finalizada del periodo.</Text>
           </View>
@@ -270,12 +276,9 @@ function DownloadCard({ range, volunteers, activities }: { range: ReportRange; v
       <View style={styles.download}>
         <View style={styles.downloadHead}>
           <View style={styles.iconWell}><Icon name={{ ios: 'arrow.down.doc', android: 'file_download' }} size={18} color={Brand.primary} /></View>
-          <View style={styles.downloadText}>
-            <Text style={styles.downloadTitle}>Descargar reporte completo (CSV)</Text>
-            <Text style={styles.downloadPeriod}>{rangeLabel(range)}</Text>
-          </View>
+          <Text style={styles.downloadTitle}>Descargar reporte (CSV)</Text>
         </View>
-        <Button testID="reports-download-open" label="Elegir archivo" variant="primary"
+        <Button testID="reports-download-open" label="Elegir archivo" variant="secondary"
           busy={busy !== null} busyLabel={busy === 'share' ? 'Preparando…' : 'Guardando…'} disabled={empty}
           icon={{ ios: 'doc.text', android: 'description' }} onPress={() => { setStep('file'); }} />
         <ExportMessage message={message} empty={empty} />
@@ -288,25 +291,25 @@ function DownloadCard({ range, volunteers, activities }: { range: ReportRange; v
 }
 
 const styles = StyleSheet.create({
-  summary: { gap: 16 },
+  summary: { gap: Spacing.lg },
   totalsBlock: { gap: 2 },
-  totals: { fontFamily: AppFonts.bodySemiBold, fontSize: 15, lineHeight: 21, color: Brand.text },
-  totalsNote: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textTertiary },
+  headlineRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 6 },
+  headline: { fontFamily: Type.title.fontFamily, fontSize: 34, lineHeight: 40, letterSpacing: -0.8, color: Brand.text, fontVariant: ['tabular-nums'] },
+  headlineUnit: { ...Type.bodyStrong, color: Brand.textSecondary },
+  totals: { ...Type.calloutStrong, color: Brand.text },
+  totalsNote: { ...Type.footnote, color: Brand.textTertiary },
   chart: { gap: 10 },
-  chartTitle: { fontFamily: AppFonts.headingSemiBold, fontSize: 17, color: Brand.text },
-  chartEmpty: { fontFamily: AppFonts.body, fontSize: 14, lineHeight: 20, color: Brand.textSecondary },
+  chartTitle: { ...Type.headline, color: Brand.text },
+  chartEmpty: { ...Type.callout, color: Brand.textSecondary },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.border },
   download: { gap: 14 },
-  downloadHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  downloadHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   iconWell: { width: 34, height: 34, borderRadius: Radius.well, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  downloadText: { flex: 1, gap: 2 },
-  downloadTitle: { fontFamily: AppFonts.headingSemiBold, fontSize: 17, color: Brand.text },
-  downloadPeriod: { fontFamily: AppFonts.bodySemiBold, fontSize: 13, color: Brand.textTertiary, marginTop: 2 },
-  fields: { gap: 16 },
-  errorBlock: { gap: 16 },
+  downloadTitle: { flex: 1, ...Type.headline, color: Brand.text },
+  fields: { gap: Spacing.lg },
   pending: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14,
     borderRadius: Radius.card, borderWidth: 1, borderColor: Brand.accent, backgroundColor: Brand.accentLight,
   },
-  pendingText: { flex: 1, fontFamily: AppFonts.body, fontSize: 14, lineHeight: 20, color: Brand.accentText },
+  pendingText: { flex: 1, ...Type.callout, color: Brand.accentText },
 });

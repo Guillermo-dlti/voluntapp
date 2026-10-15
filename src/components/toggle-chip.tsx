@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Type } from '@/constants/theme';
 
 interface ToggleChipProps {
   label: string;
@@ -32,6 +32,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill, borderWidth: 1, borderColor: Brand.forestMuted, backgroundColor: 'transparent',
   },
   on: { backgroundColor: Brand.surface, borderColor: Brand.surface },
-  label: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.forestText },
+  label: { ...Type.calloutStrong, color: Brand.forestText },
   labelOn: { color: Brand.forest },
 });

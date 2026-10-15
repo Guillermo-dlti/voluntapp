@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { AppFonts, Brand } from '@/constants/theme';
+import { Brand, Type } from '@/constants/theme';
 import { useReportExport } from '@/hooks/use-report-export';
 import type { ReportKind } from '@/services/reports';
 import type { ReportRange } from '@/utils/report-range';
@@ -49,6 +49,6 @@ const styles = StyleSheet.create({
   container: { gap: 8 },
   row: { flexDirection: 'row', gap: 12 },
   action: { flex: 1 },
-  error: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, textAlign: 'center' },
-  hint: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textSecondary, textAlign: 'center' },
+  error: { ...Type.callout, color: Brand.dangerText, textAlign: 'center' },
+  hint: { ...Type.footnote, color: Brand.textSecondary, textAlign: 'center' },
 });

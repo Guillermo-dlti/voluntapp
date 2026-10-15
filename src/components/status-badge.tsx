@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Type } from '@/constants/theme';
 
 export type BadgeTone = 'success' | 'neutral' | 'attention' | 'critical';
 
@@ -24,5 +24,5 @@ export function StatusBadge({ label, tone }: { label: string; tone: BadgeTone })
 
 const styles = StyleSheet.create({
   badge: { alignSelf: 'flex-start', borderRadius: Radius.pill, paddingHorizontal: 9, paddingVertical: 3 },
-  label: { fontFamily: AppFonts.bodySemiBold, fontSize: 12 },
+  label: { ...Type.caption },
 });

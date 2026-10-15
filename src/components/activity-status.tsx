@@ -1,14 +1,12 @@
-import { StatusBadge, type BadgeTone } from '@/components/status-badge';
-import type { ActivityStatus } from '@/services/activities';
+import { StatusBadge } from '@/components/status-badge';
+import type { ActivitySummary } from '@/services/activities';
+import { stepBadge } from '@/utils/activity-flow';
 
-export const activityStatusLabels: Record<ActivityStatus, { label: string; tone: BadgeTone }> = {
-  draft: { label: 'Borrador', tone: 'attention' },
-  open: { label: 'Publicada', tone: 'success' },
-  closed: { label: 'Cerrada', tone: 'neutral' },
-  cancelled: { label: 'Cancelada', tone: 'critical' },
-};
+type Timing = Pick<ActivitySummary, 'status' | 'startsAt' | 'attendanceStartedAt' | 'attendanceFinalizedAt'>;
 
-export function ActivityStatusBadge({ status }: { status: ActivityStatus }) {
-  const { label, tone } = activityStatusLabels[status];
+// An activity's pill says its step (Borrador, Publicada, Por finalizar, Finalizada, Cancelada), the
+// same word the progress strip uses, rather than the stored status.
+export function ActivityStepBadge({ activity }: { activity: Timing }) {
+  const { label, tone } = stepBadge(activity);
   return <StatusBadge label={label} tone={tone} />;
 }

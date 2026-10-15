@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 
 interface SegmentedTabsProps<T extends string> {
   options: readonly { value: T; label: string }[];
@@ -11,10 +11,12 @@ interface SegmentedTabsProps<T extends string> {
 }
 
 // Equal width tabs that switch the content below them (Detalles, Participantes, Asistencia).
+// A white thumb on a muted track (after Luma and iOS segmented controls), so the selected tab never
+// looks like the screen's green primary button.
 // Built in React Native rather than the Compose segmented row, which makes a scroll view jump.
 export function SegmentedTabs<T extends string>({ options, value, onChange, testID }: SegmentedTabsProps<T>) {
   return (
-    <View testID={testID} accessibilityRole="tablist" style={styles.row}>
+    <View testID={testID} accessibilityRole="tablist" style={styles.track}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -30,17 +32,16 @@ export function SegmentedTabs<T extends string>({ options, value, onChange, test
 }
 
 const styles = StyleSheet.create({
-  row: {
+  track: {
     flexDirection: 'row',
-    gap: 4,
-    padding: 4,
+    gap: Spacing.xs,
+    padding: Spacing.xs,
     borderRadius: Radius.button,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    backgroundColor: Brand.surface,
+    backgroundColor: Brand.surfaceMuted,
   },
-  tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, borderRadius: Radius.button - 4 },
-  selected: { backgroundColor: Brand.primary },
-  label: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.textSecondary },
-  selectedLabel: { color: Brand.surface },
+  tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.sm, borderRadius: Radius.button - Spacing.xs },
+  // Flat like every control: white on the muted track, outlined so it holds against the sheet.
+  selected: { backgroundColor: Brand.surface, borderWidth: 1, borderColor: Brand.border },
+  label: { ...Type.calloutStrong, color: Brand.textSecondary },
+  selectedLabel: { color: Brand.text },
 });

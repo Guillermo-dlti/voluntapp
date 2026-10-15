@@ -2,7 +2,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand, Elevation, Radius } from '@/constants/theme';
+import { Brand, Elevation, Radius, Type } from '@/constants/theme';
 
 interface FabProps {
   label: string;
@@ -37,5 +37,5 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.primary,
     boxShadow: Elevation.raised,
   },
-  label: { fontFamily: AppFonts.bodySemiBold, fontSize: 16, color: Brand.surface },
+  label: { ...Type.bodyStrong, color: Brand.surface },
 });

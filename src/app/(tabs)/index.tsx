@@ -4,7 +4,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { ActivityRow } from '@/components/activity-row';
-import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { Row, Section } from '@/components/grouped-list';
 import { PressableScale } from '@/components/pressable-scale';
@@ -13,7 +12,7 @@ import { StatCard } from '@/components/stat-card';
 import { SkeletonDashboard } from '@/components/skeleton';
 import { roleLabels } from '@/constants/roles';
 import { useLargeText } from '@/hooks/use-large-text';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import type { ActivitySummary } from '@/services/activities';
@@ -77,10 +76,8 @@ export default function DashboardScreen() {
       {state === 'loading' ? (
         <SkeletonDashboard layout={user.role === 'supervisor' ? 'pair' : 'hero'} />
       ) : state === 'error' || !data ? (
-        <View style={styles.errorBlock}>
-          <EmptyState icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar el inicio" body={message} />
-          <Button label="Reintentar" variant="secondary" onPress={() => { setState('loading'); void load(); }} />
-        </View>
+        <EmptyState bare icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar el inicio" body={message}
+          action={{ label: 'Reintentar', onPress: () => { setState('loading'); void load(); } }} />
       ) : (
         <>
           {stale ? (
@@ -92,18 +89,18 @@ export default function DashboardScreen() {
               <PressableScale testID="home-kpi-hours" accessibilityRole="button" accessibilityLabel="Ver horas de este mes en Reportes"
                 onPress={() => router.navigate({ pathname: '/reportes', params: { preset: 'thisMonth' } })}>
                 <StatCard label="Horas este mes" value={formatHoursNumber(data.kpis.hoursThisMonth)}
-                  unit={data.kpis.hoursThisMonth === 1 ? 'hora' : 'horas'} caption="con asistencia finalizada" icon={{ ios: 'clock', android: 'schedule' }} />
+                  unit={data.kpis.hoursThisMonth === 1 ? 'hora' : 'horas'} caption="con asistencia finalizada" icon={{ ios: 'clock', android: 'schedule' }} linked />
               </PressableScale>
               <View style={[styles.pair, largeText && styles.stacked]}>
                 <PressableScale testID="home-kpi-volunteers" accessibilityRole="button" accessibilityLabel="Ver voluntarios activos"
                   style={styles.half} onPress={() => router.navigate({ pathname: '/voluntarios', params: { status: 'active' } })}>
                   <StatCard label="Voluntarios activos" value={integer(data.kpis.activeVolunteers)} caption="en el padrón"
-                    icon={{ ios: 'person.2', android: 'group' }} />
+                    icon={{ ios: 'person.2', android: 'group' }} linked />
                 </PressableScale>
                 <PressableScale testID="home-kpi-activities" accessibilityRole="button" accessibilityLabel="Ver próximas actividades"
                   style={styles.half} onPress={() => openActivities('upcoming', false)}>
                   <StatCard label="Actividades este mes" value={integer(data.kpis.activitiesThisMonth)} caption="publicadas o cerradas"
-                    icon={{ ios: 'calendar', android: 'calendar_month' }} />
+                    icon={{ ios: 'calendar', android: 'calendar_month' }} linked />
                 </PressableScale>
               </View>
             </Animated.View>
@@ -117,7 +114,7 @@ export default function DashboardScreen() {
                 accessibilityLabel={`${integer(data.own.pending)} por finalizar. Ver tus actividades con asistencia pendiente`}
                 onPress={() => openActivities('pending', true)}>
                 <StatCard label="Por finalizar" value={integer(data.own.pending)} caption="asistencia pendiente"
-                  icon={{ ios: 'checklist', android: 'pending_actions' }} tone={data.own.pending > 0 ? 'attention' : 'default'} />
+                  icon={{ ios: 'checklist', android: 'pending_actions' }} tone={data.own.pending > 0 ? 'attention' : 'default'} linked />
               </PressableScale>
             </Animated.View>
           )}
@@ -127,18 +124,18 @@ export default function DashboardScreen() {
               <Section title="Próximas actividades" bare>
                 {data.scope === 'all' ? (
                   <EmptyState icon={{ ios: 'calendar', android: 'calendar_month' }} title="Sin actividades próximas"
-                    body="Las actividades en borrador o publicadas que aún no terminan aparecen aquí, la más cercana primero." />
+                    body="Aquí aparecen las actividades en borrador o publicadas que aún no terminan." />
                 ) : (
                   <EmptyState icon={{ ios: 'calendar', android: 'calendar_month' }} title="No tienes actividades próximas"
                     body="Cuando Coordinación te asigne como supervisor de una actividad publicada, aparecerá aquí." />
                 )}
               </Section>
             ) : (
-              <Section title="Próximas actividades">
+              <Section title="Próximas actividades" inset="tile">
                 {data.upcoming.map((activity) => (
                   <ActivityRow key={activity.id} testID={`home-activity-${activity.id}`} activity={activity} onPress={() => openActivity(activity)} />
                 ))}
-                <Row testID="home-upcoming-all" label="Ver todas" onPress={() => openActivities('upcoming', data.scope === 'own')} />
+                <Row testID="home-upcoming-all" label="Ver todas" tone="link" onPress={() => openActivities('upcoming', data.scope === 'own')} />
               </Section>
             )}
           </Animated.View>
@@ -150,11 +147,11 @@ export default function DashboardScreen() {
                   value={data.scope === 'all' ? 'No hay actividades esperando cierre de asistencia.' : 'Ninguna de tus actividades espera cierre de asistencia.'} />
               </Section>
             ) : (
-              <Section title="Por finalizar">
+              <Section title="Por finalizar" inset="tile">
                 {data.pending.map((activity) => (
                   <ActivityRow key={activity.id} testID={`home-activity-${activity.id}`} activity={activity} onPress={() => openActivity(activity)} />
                 ))}
-                <Row testID="home-pending-all" label="Ver todas" onPress={() => openActivities('pending', data.scope === 'own')} />
+                <Row testID="home-pending-all" label="Ver todas" tone="link" onPress={() => openActivities('pending', data.scope === 'own')} />
               </Section>
             )}
           </Animated.View>
@@ -165,13 +162,16 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  roleChip: { alignSelf: 'flex-start', backgroundColor: Brand.accent, borderRadius: Radius.pill, paddingHorizontal: 12, paddingVertical: 5 },
-  roleText: { fontFamily: AppFonts.bodySemiBold, fontSize: 13, color: Brand.forest },
-  errorBlock: { gap: 16 },
+  // Quiet: the role is a fact about the account, not something that needs attention, so no mango.
+  roleChip: {
+    alignSelf: 'flex-start', borderRadius: Radius.pill, borderWidth: 1, borderColor: Brand.forestMuted,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
+  },
+  roleText: { ...Type.footnote, fontFamily: Type.calloutStrong.fontFamily, color: Brand.forestText },
   // Pulled toward the KPIs below, since the screen's content gap is wide.
-  stale: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center', marginBottom: -12 },
-  kpis: { gap: 12 },
-  pair: { flexDirection: 'row', gap: 12 },
+  stale: { ...Type.callout, color: Brand.textSecondary, textAlign: 'center', marginBottom: -Spacing.md },
+  kpis: { gap: Spacing.md },
+  pair: { flexDirection: 'row', gap: Spacing.md },
   stacked: { flexDirection: 'column' },
   half: { flex: 1 },
 });

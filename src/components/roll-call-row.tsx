@@ -1,11 +1,12 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { RowMetrics } from '@/components/grouped-list';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { StatusBadge, type BadgeTone } from '@/components/status-badge';
 import { useLargeText } from '@/hooks/use-large-text';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 import type { AttendanceStatus, Participant } from '@/services/activities';
 import { attendanceStatusLabels, hoursText } from '@/utils/attendance-rules';
 
@@ -45,8 +46,9 @@ export function RollCallRow({ entry, recording, busy, locked, error, onChoose, o
           {record ? `${hoursText(record.hours)} h${record.correctionReason ? ' · corregido' : ''}` : 'Sin registrar'}
         </Text>
       </View>
+      {/* While recording, the selected button already says the status; the pill is for read-only rows. */}
       {busy ? <ActivityIndicator color={Brand.primary} accessibilityLabel="Guardando" />
-        : record ? <StatusBadge label={attendanceStatusLabels[record.status]} tone={attendanceTones[record.status]} /> : null}
+        : record && !recording ? <StatusBadge label={attendanceStatusLabels[record.status]} tone={attendanceTones[record.status]} /> : null}
       {onOpen ? <Icon name={{ ios: 'chevron.right', android: 'chevron_right' }} size={18} color={Brand.textTertiary} /> : null}
     </>
   );
@@ -62,14 +64,14 @@ export function RollCallRow({ entry, recording, busy, locked, error, onChoose, o
 
       {recording ? (
         <View style={styles.choices}>
-          {choices.map((choice) => {
+          {choices.map((choice, index) => {
             const selected = record?.status === choice.status;
             return (
               <PressableScale key={choice.status} testID={`attendance-${entry.volunteerId}-${choice.status}`}
                 accessibilityRole="button" accessibilityLabel={`${choice.label}: ${name}`}
                 accessibilityState={{ selected, disabled: busy || locked, busy }} disabled={busy || locked}
                 onPress={() => onChoose(choice.status)}
-                style={[styles.choice, selected && styles[choice.status], (busy || locked) && styles.waiting]}>
+                style={[styles.choice, index > 0 && styles.divided, selected && styles[choice.status], (busy || locked) && styles.waiting]}>
                 <Icon name={choice.icon} size={16} color={selected ? Brand.surface : Brand.textSecondary} />
                 <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.choiceLabel, selected && styles.choiceSelected]}>{choice.label}</Text>
               </PressableScale>
@@ -84,21 +86,27 @@ export function RollCallRow({ entry, recording, busy, locked, error, onChoose, o
 }
 
 const styles = StyleSheet.create({
-  row: { paddingVertical: 4 },
-  summary: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 8 },
+  row: { paddingBottom: Spacing.xs },
+  summary: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: RowMetrics.gap, paddingHorizontal: RowMetrics.padding, paddingVertical: Spacing.sm },
   text: { flex: 1, gap: 2 },
-  name: { fontFamily: AppFonts.body, fontSize: 16, color: Brand.text },
-  detail: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },
-  choices: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
+  name: { ...Type.body, color: Brand.text },
+  detail: { ...Type.callout, color: Brand.textSecondary },
+  // One joined control rather than three loose buttons (after iOS segmented controls): it reads as a
+  // single choice and weighs less on a long roll. Each segment keeps the 48 dp touch target.
+  choices: {
+    flexDirection: 'row', marginHorizontal: RowMetrics.padding, marginBottom: Spacing.md,
+    borderRadius: Radius.button, borderWidth: 1, borderColor: Brand.border, overflow: 'hidden',
+  },
   choice: {
     flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderRadius: Radius.button, borderWidth: 1, borderColor: Brand.border, backgroundColor: Brand.surface,
+    backgroundColor: Brand.surface,
   },
-  present: { backgroundColor: Brand.success, borderColor: Brand.success },
-  late: { backgroundColor: Brand.accentText, borderColor: Brand.accentText },
-  absent: { backgroundColor: Brand.danger, borderColor: Brand.danger },
+  divided: { borderLeftWidth: 1, borderLeftColor: Brand.border },
+  present: { backgroundColor: Brand.success, borderLeftColor: Brand.success },
+  late: { backgroundColor: Brand.accentText, borderLeftColor: Brand.accentText },
+  absent: { backgroundColor: Brand.danger, borderLeftColor: Brand.danger },
   waiting: { opacity: 0.5 },
-  choiceLabel: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.text },
+  choiceLabel: { ...Type.calloutStrong, color: Brand.text },
   choiceSelected: { color: Brand.surface },
-  error: { fontFamily: AppFonts.body, fontSize: 13, lineHeight: 18, color: Brand.dangerText, paddingHorizontal: 16, paddingBottom: 12 },
+  error: { ...Type.footnote, color: Brand.dangerText, paddingHorizontal: RowMetrics.padding, paddingBottom: Spacing.md },
 });

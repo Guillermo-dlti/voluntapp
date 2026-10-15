@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand, Elevation, MaxContentWidth, Radius } from '@/constants/theme';
+import { Brand, Elevation, MaxContentWidth, Radius, Type } from '@/constants/theme';
 import { useMotion } from '@/utils/motion';
 
 export type ToastTone = 'success' | 'info';
@@ -42,5 +42,5 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.surface,
     boxShadow: Elevation.raised,
   },
-  text: { flex: 1, fontFamily: AppFonts.bodySemiBold, fontSize: 15, lineHeight: 21, color: Brand.text },
+  text: { flex: 1, ...Type.bodyStrong, color: Brand.text },
 });

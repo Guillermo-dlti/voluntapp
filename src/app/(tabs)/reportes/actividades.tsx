@@ -8,7 +8,7 @@ import { ExportActions } from '@/components/export-actions';
 import { Row, Section } from '@/components/grouped-list';
 import { Screen } from '@/components/screen';
 import { SkeletonList } from '@/components/skeleton';
-import { AppFonts, Brand } from '@/constants/theme';
+import { Brand, Type } from '@/constants/theme';
 import { useReportList } from '@/hooks/use-report-list';
 import { listActivityAttendance, type ActivityAttendanceRow } from '@/services/reports';
 import { formatHours, plural, rangeErrors, rangeLabel } from '@/utils/report-range';
@@ -72,6 +72,6 @@ export default function ActivityAttendanceScreen() {
 }
 
 const styles = StyleSheet.create({
-  muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
+  muted: { ...Type.callout, color: Brand.textSecondary, textAlign: 'center' },
   errorBlock: { gap: 16 },
 });

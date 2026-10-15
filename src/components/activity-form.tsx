@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type TextInput } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { DateField } from '@/components/date-field';
-import { FormField } from '@/components/form-field';
-import { Row } from '@/components/grouped-list';
+import { FieldGroup, FormField } from '@/components/form-field';
+import { Row, Section } from '@/components/grouped-list';
 import { Icon } from '@/components/icon';
 import { TimeField } from '@/components/time-field';
 import { SkeletonRow } from '@/components/skeleton';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 import { ApiError, apiMessage } from '@/services/api';
 import { dateConflicts, listSupervisors, type DateConflict } from '@/services/activities';
 import {
@@ -96,62 +96,58 @@ export function ActivityForm({ initial, submitLabel, busyLabel, onSubmit, onSess
 
   return (
     <View style={styles.form}>
-      <FormGroup title="Actividad">
+      <FieldGroup title="Actividad">
         <FormField testID="activity-name" label="Nombre" value={draft.name} onChangeText={set('name')} error={errors.name}
-          placeholder="Clasificación de despensas" maxLength={120} autoCapitalize="sentences" returnKeyType="next"
+          placeholder="Ej.: Clasificación de despensas" maxLength={120} autoCapitalize="sentences" returnKeyType="next"
           submitBehavior="submit" onSubmitEditing={() => refs.location.current?.focus()} {...common} />
         <FormField ref={refs.location} testID="activity-location" label="Lugar" value={draft.location} onChangeText={set('location')}
-          error={errors.location} placeholder="Bodega principal, Zapopan" maxLength={200} returnKeyType="next"
+          error={errors.location} placeholder="Ej.: Bodega principal, Zapopan" maxLength={200} returnKeyType="next"
           submitBehavior="submit" onSubmitEditing={() => refs.capacity.current?.focus()} {...common} />
         <FormField ref={refs.capacity} testID="activity-capacity" label="Cupo" value={draft.capacity} onChangeText={set('capacity')}
-          error={errors.capacity} hint="Cuántas personas se pueden asignar, de 1 a 1000." keyboardType="number-pad" maxLength={4} {...common} />
-      </FormGroup>
+          error={errors.capacity} placeholder="Ej.: 12" hint="Cuántas personas se pueden asignar, de 1 a 1000." keyboardType="number-pad"
+          maxLength={4} {...common} />
+      </FieldGroup>
 
-      <FormGroup title="Horario">
-        <DateField testID="activity-date" label="Fecha" value={draft.date} onChange={set('date')} error={errors.date}
+      <Section title="Horario" inset="none"
+        footer={endsNextDay(draft) ? 'Termina al día siguiente, a la hora de fin.' : 'Hora de Guadalajara. Si el fin es antes del inicio, termina al día siguiente.'}>
+        <DateField variant="row" testID="activity-date" label="Fecha" value={draft.date} onChange={set('date')} error={errors.date}
           min={range.min} max={range.max} start={range.start} />
-        <TimeField testID="activity-start" label="Inicio" value={draft.startTime} onChange={set('startTime')}
+        <TimeField variant="row" testID="activity-start" label="Inicio" value={draft.startTime} onChange={set('startTime')}
           error={errors.startTime} start="09:00" />
-        <TimeField testID="activity-end" label="Fin" value={draft.endTime} onChange={set('endTime')}
+        <TimeField variant="row" testID="activity-end" label="Fin" value={draft.endTime} onChange={set('endTime')}
           error={errors.endTime} start="13:00" />
-        <Text style={styles.hint}>
-          {endsNextDay(draft) ? 'Termina al día siguiente, a la hora de fin.' : 'Hora de Guadalajara. Si el fin es antes del inicio, termina al día siguiente.'}
-        </Text>
-      </FormGroup>
+      </Section>
 
-      <FormGroup title="Supervisión" padded={false}>
-        {supervisors === null && !supervisorsError ? (
-          <View accessible accessibilityLabel="Cargando supervisores…"><SkeletonRow leading="icon" /><SkeletonRow leading="icon" /></View>
-        ) : supervisorsError ? (
-          <Text style={[styles.hint, styles.padded]}>{supervisorsError}</Text>
-        ) : (
-          <View>
-            {[{ id: '', fullName: 'Sin supervisor' }, ...(supervisors ?? [])].map((staff, index) => (
-              <View key={staff.id || 'none'}>
-                {index > 0 ? <View style={styles.hairline} /> : null}
-                <Row testID={`activity-supervisor-${staff.id || 'none'}`} label={staff.fullName} chevron={false}
-                  trailing={draft.supervisorId === staff.id
-                    ? <Icon name={{ ios: 'checkmark.circle.fill', android: 'check_circle' }} size={22} color={Brand.primary} />
-                    : <Icon name={{ ios: 'circle', android: 'radio_button_unchecked' }} size={22} color={Brand.textTertiary} />}
-                  onPress={busy ? undefined : () => set('supervisorId')(staff.id)} />
-              </View>
-            ))}
-            {/* The saved supervisor may have been deactivated since; keep showing the choice so it isn't lost silently. */}
-            {draft.supervisorId && supervisors && !selectedSupervisor ? (
-              <Text style={[styles.hint, styles.padded]}>La persona elegida ya no está activa. Elige a otra o “Sin supervisor”.</Text>
-            ) : null}
-          </View>
-        )}
-      </FormGroup>
-      {errors.supervisorId ? <Text accessibilityRole="alert" style={styles.fieldError}>{errors.supervisorId}</Text> : null}
+      <View style={styles.group}>
+        <Section title="Supervisión" bare={supervisors === null || Boolean(supervisorsError)}>
+          {supervisors === null && !supervisorsError ? (
+            <Card padded={false}>
+              <View accessible accessibilityLabel="Cargando supervisores…"><SkeletonRow leading="icon" /><SkeletonRow leading="icon" /></View>
+            </Card>
+          ) : supervisorsError ? (
+            <Card><Text style={styles.hint}>{supervisorsError}</Text></Card>
+          ) : [{ id: '', fullName: 'Sin supervisor' }, ...(supervisors ?? [])].map((staff) => (
+            <Row key={staff.id || 'none'} testID={`activity-supervisor-${staff.id || 'none'}`} label={staff.fullName} chevron={false}
+              trailing={draft.supervisorId === staff.id
+                ? <Icon name={{ ios: 'checkmark.circle.fill', android: 'check_circle' }} size={22} color={Brand.primary} />
+                : <Icon name={{ ios: 'circle', android: 'radio_button_unchecked' }} size={22} color={Brand.textTertiary} />}
+              onPress={busy ? undefined : () => set('supervisorId')(staff.id)} />
+          ))}
+        </Section>
+        {/* The saved supervisor may have been deactivated since; keep showing the choice so it isn't lost silently. */}
+        {draft.supervisorId && supervisors && !selectedSupervisor ? (
+          <Text style={styles.note}>La persona elegida ya no está activa. Elige a otra o “Sin supervisor”.</Text>
+        ) : null}
+        {errors.supervisorId ? <Text accessibilityRole="alert" style={styles.fieldError}>{errors.supervisorId}</Text> : null}
+      </View>
 
-      <FormGroup title="Detalles">
+      <FieldGroup title="Detalles">
         <FormField testID="activity-description" label="Descripción (opcional)" value={draft.description} onChangeText={set('description')}
           error={errors.description} hint="Qué se va a hacer." multiline maxLength={2000} style={styles.multiline} textAlignVertical="top" {...common} />
         <FormField testID="activity-requirements" label="Requisitos (opcional)" value={draft.requirements} onChangeText={set('requirements')}
           error={errors.requirements} hint="Ropa, calzado, edad mínima o lo que deban traer." multiline maxLength={1000}
           style={styles.multiline} textAlignVertical="top" {...common} />
-      </FormGroup>
+      </FieldGroup>
 
       {message ? (
         <View accessibilityRole="alert" style={styles.alert}>
@@ -168,25 +164,13 @@ export function ActivityForm({ initial, submitLabel, busyLabel, onSubmit, onSess
   );
 }
 
-function FormGroup({ title, padded = true, children }: { title: string; padded?: boolean; children: ReactNode }) {
-  return (
-    <View style={styles.group}>
-      <Text accessibilityRole="header" style={styles.groupTitle}>{title}</Text>
-      <Card padded={padded}><View style={padded ? styles.groupBody : undefined}>{children}</View></Card>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  form: { gap: 24 },
-  group: { gap: 8 },
-  groupTitle: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.textSecondary, paddingHorizontal: 4 },
-  groupBody: { gap: 16 },
-  hint: { fontFamily: AppFonts.body, color: Brand.textSecondary, fontSize: 13 },
-  padded: { padding: 16 },
-  hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.divider, marginLeft: 16 },
+  form: { gap: Spacing.xl },
+  group: { gap: Spacing.sm },
+  hint: { ...Type.footnote, color: Brand.textSecondary },
+  note: { ...Type.footnote, color: Brand.textSecondary, paddingHorizontal: Spacing.xs },
   multiline: { minHeight: 100, paddingTop: 14 },
-  fieldError: { fontFamily: AppFonts.body, color: Brand.dangerText, fontSize: 13, marginTop: -16, paddingHorizontal: 4 },
-  alert: { gap: 4, backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
-  alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
+  fieldError: { ...Type.footnote, color: Brand.dangerText, paddingHorizontal: Spacing.xs },
+  alert: { gap: Spacing.xs, backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: Spacing.md, paddingHorizontal: 14 },
+  alertText: { ...Type.callout, color: Brand.dangerText },
 });

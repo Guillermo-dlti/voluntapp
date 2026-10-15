@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { StyleSheet, Text, View, useColorScheme } from 'react-native';
 
 import { Button } from '@/components/button';
-import { AppFonts, Brand, Motion } from '@/constants/theme';
+import { Brand, Motion, Type } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
 import { FeedbackProvider } from '@/providers/feedback-provider';
 
@@ -80,5 +80,5 @@ const styles = StyleSheet.create({
   // Same width as the native splash image (imageWidth in app.json), so the hand-off doesn't jump.
   logo: { width: 120, height: 136 },
   error: { alignSelf: 'stretch', gap: 16 },
-  errorText: { fontFamily: AppFonts.body, fontSize: 16, lineHeight: 22, color: Brand.forestText, textAlign: 'center' },
+  errorText: { ...Type.body, color: Brand.forestText, textAlign: 'center' },
 });

@@ -1,9 +1,8 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 import { ActivityRow } from '@/components/activity-row';
-import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { Fab } from '@/components/fab';
 import { FilterChips } from '@/components/filter-chips';
@@ -13,7 +12,7 @@ import { SearchField } from '@/components/search-field';
 import { ToggleChip } from '@/components/toggle-chip';
 import { SkeletonList } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
-import { AppFonts, Brand } from '@/constants/theme';
+import { Brand, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { listActivities, type ActivitySummary, type WhenFilter } from '@/services/activities';
@@ -127,17 +126,16 @@ export default function ActivitiesScreen() {
       {state === 'loading' ? (
         <SkeletonList variant="activity" rows={4} label="Cargando actividades…" />
       ) : state === 'error' ? (
-        <View style={styles.errorBlock}>
-          <EmptyState icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar la lista" body={message} />
-          <Button label="Reintentar" variant="secondary" onPress={() => { setState('loading'); void load(1); }} />
-        </View>
+        <EmptyState bare icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar la lista" body={message}
+          action={{ label: 'Reintentar', onPress: () => { setState('loading'); void load(1); } }} />
       ) : items.length === 0 ? (
-        <EmptyState testID="activities-empty"
+        <EmptyState bare testID="activities-empty"
           icon={searching ? { ios: 'magnifyingglass', android: 'search_off' } : { ios: 'calendar', android: 'calendar_month' }}
           title={searching ? 'Sin resultados' : emptyCopy[when].title}
           body={filtered ? `${emptyBody}\n\n${mineNote}` : emptyBody} />
       ) : (
-        <Section title={searching ? 'Resultados' : undefined}>
+        <Section inset="tile" title={searching ? 'Resultados' : whenOptions.find((option) => option.value === when)?.label}
+          count={`${items.length}${hasMore ? '+' : ''}`}>
           {items.map((activity) => (
             <ActivityRow key={activity.id} activity={activity}
               onPress={() => router.push({ pathname: '/actividades/[id]', params: { id: activity.id } })} />
@@ -151,6 +149,5 @@ export default function ActivitiesScreen() {
 }
 
 const styles = StyleSheet.create({
-  muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
-  errorBlock: { gap: 16 },
+  muted: { ...Type.callout, color: Brand.textSecondary, textAlign: 'center' },
 });

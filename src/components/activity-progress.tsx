@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { AppFonts, Brand, Radius, Type } from '@/constants/theme';
 import { flowSteps, type ActivityStep, type NextStep } from '@/utils/activity-flow';
 
 // Borrador → Publicada → Asistencia → Finalizada, with the steps behind checked and the current one ringed.
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   core: { width: 10, height: 10, borderRadius: 5, backgroundColor: Brand.primary },
   // Four labels share one row, so they grow only to 1.3× with the system text size; the strip's
   // accessibility label still reads the full step aloud.
-  label: { alignSelf: 'stretch', textAlign: 'center', fontFamily: AppFonts.body, fontSize: 12, color: Brand.textTertiary },
+  label: { alignSelf: 'stretch', textAlign: 'center', ...Type.footnote, color: Brand.textTertiary },
   labelReached: { color: Brand.textSecondary },
   labelActive: { fontFamily: AppFonts.bodySemiBold, color: Brand.text },
   card: { gap: 14 },
@@ -97,5 +97,5 @@ const styles = StyleSheet.create({
   done: { backgroundColor: Brand.primaryLight },
   attention: { backgroundColor: Brand.accentLight },
   critical: { backgroundColor: Brand.dangerLight },
-  text: { flex: 1, fontFamily: AppFonts.body, fontSize: 16, lineHeight: 22, color: Brand.text },
+  text: { flex: 1, ...Type.body, color: Brand.text },
 });

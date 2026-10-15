@@ -7,7 +7,7 @@ import { Avatar } from '@/components/avatar';
 import { Row, Section } from '@/components/grouped-list';
 import { Screen } from '@/components/screen';
 import { roleCan, roleLabels } from '@/constants/roles';
-import { AppFonts, Brand } from '@/constants/theme';
+import { Brand, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { authMessage } from '@/services/auth';
 
@@ -43,16 +43,16 @@ export default function SettingsScreen() {
       </View>
     }>
       <View testID="settings-account-section">
-        <Section title="Cuenta">
-          <Row icon={{ ios: 'envelope', android: 'mail' }} label="Correo" value={user.email} />
-          <Row icon={{ ios: 'person.badge.key', android: 'badge' }} label="Rol" value={roleLabels[user.role]} />
+        {/* The band already shows the name and email; the section adds only what it doesn't. */}
+        <Section title="Cuenta" inset="icon">
+          <Row emphasis="value" icon={{ ios: 'person.badge.key', android: 'badge' }} label="Rol" value={roleLabels[user.role]} />
         </Section>
       </View>
 
       {isAdmin ? (
-        <Section title="Administración" footer="Solo las cuentas de Administración ven esta sección.">
-          <Row icon={{ ios: 'person.3', android: 'manage_accounts' }} label="Personal" note="Próximamente" />
-          <Row icon={{ ios: 'clock.arrow.circlepath', android: 'history' }} label="Bitácora de auditoría" note="Próximamente" />
+        <Section title="Administración" inset="icon" footer="Llegan en una próxima versión. Solo las cuentas de Administración ven esta sección.">
+          <Row icon={{ ios: 'person.3', android: 'manage_accounts' }} label="Personal" note="Próximamente" disabled />
+          <Row icon={{ ios: 'clock.arrow.circlepath', android: 'history' }} label="Bitácora de auditoría" note="Próximamente" disabled />
         </Section>
       ) : null}
 
@@ -69,7 +69,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   profileText: { flex: 1, gap: 2 },
-  name: { fontFamily: AppFonts.headingSemiBold, fontSize: 19, color: Brand.forestText },
-  email: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.forestMuted },
-  version: { fontFamily: AppFonts.body, fontSize: 12, color: Brand.textTertiary, textAlign: 'center' },
+  name: { ...Type.headline, color: Brand.forestText },
+  email: { ...Type.callout, color: Brand.forestMuted },
+  version: { ...Type.caption, fontFamily: Type.callout.fontFamily, color: Brand.textTertiary, textAlign: 'center' },
 });

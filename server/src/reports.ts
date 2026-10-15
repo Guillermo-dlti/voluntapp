@@ -100,12 +100,18 @@ function reportQueries({ activities, volunteers }: V2Collections) {
   async function summary(range: Range) {
     const candidates = await activities.find(inRange(range), { projection: { startsAt: 1, attendanceFinalizedAt: 1 } }).toArray();
     const now = new Date();
-    const [totals] = await activities.aggregate<{ hours: number; volunteers: number }>(countedRecords(range, {
-      $group: { _id: null, hours: { $sum: '$hours' }, volunteers: { $addToSet: { $cond: [{ $in: ['$status', ['present', 'late']] }, '$volunteerId', null] } } },
-    }).concat({ $project: { hours: 1, volunteers: { $size: { $setDifference: ['$volunteers', [null]] } } } })).toArray();
+    const [totals] = await activities.aggregate<{ hours: number; volunteers: number; present: number; late: number; absent: number }>(countedRecords(range, {
+      $group: {
+        _id: null, hours: tally.hours, present: tally.present, late: tally.late, absent: tally.absent,
+        volunteers: { $addToSet: { $cond: [{ $in: ['$status', ['present', 'late']] }, '$volunteerId', null] } },
+      },
+    }).concat({ $project: { hours: 1, present: 1, late: 1, absent: 1, volunteers: { $size: { $setDifference: ['$volunteers', [null]] } } } })).toArray();
     return {
       totalHours: round2(totals?.hours ?? 0),
       volunteersParticipated: totals?.volunteers ?? 0,
+      presentCount: totals?.present ?? 0,
+      lateCount: totals?.late ?? 0,
+      absentCount: totals?.absent ?? 0,
       activitiesHeld: candidates.filter((activity) => activity.attendanceFinalizedAt).length,
       pendingActivities: candidates.filter((activity) => !activity.attendanceFinalizedAt && activity.startsAt < now).length,
     };

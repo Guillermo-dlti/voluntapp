@@ -2,44 +2,75 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
+import { ActionSheet, type SheetAction } from '@/components/action-sheet';
 import { ActivityStatusBadge } from '@/components/activity-status';
+import { NextStepCard, ProgressStrip } from '@/components/activity-progress';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
+import { FilterChips } from '@/components/filter-chips';
 import { Row, Section } from '@/components/grouped-list';
+import { IconButton } from '@/components/icon-button';
 import { ReasonDialog } from '@/components/reason-dialog';
+import { RollCallRow } from '@/components/roll-call-row';
 import { Screen } from '@/components/screen';
+import { SegmentedTabs } from '@/components/segmented-tabs';
 import { StatCard } from '@/components/stat-card';
-import { StatusBadge, type BadgeTone } from '@/components/status-badge';
 import { roleCan } from '@/constants/roles';
-import { AppFonts, Brand } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import {
-  cancelAssignment, finalizeAttendance, getActivity, markAllPresent, missingPeople, setActivityStatus,
+  cancelAssignment, finalizeAttendance, getActivity, markAllPresent, missingPeople, recordAttendance, setActivityStatus,
   type ActivityDetail, type ActivityStatus, type AttendanceStatus, type MissingPerson, type Participant,
 } from '@/services/activities';
-import { attendanceStatusLabels, hoursText } from '@/utils/attendance-rules';
+import {
+  activityStep, canRecordOn, countedHours, defaultTab, isDetailTab, nextStep, rollCall, type DetailTab, type NextAction,
+} from '@/utils/activity-flow';
+import { hoursText } from '@/utils/attendance-rules';
 import { formatDateTime, formatSchedule } from '@/utils/time';
-
-const attendanceTones: Record<AttendanceStatus, BadgeTone> = { present: 'success', late: 'attention', absent: 'critical' };
 import { formatPhone } from '@/utils/volunteer-rules';
+
+const tabOptions = [
+  { value: 'detalles', label: 'Detalles' },
+  { value: 'participantes', label: 'Participantes' },
+  { value: 'asistencia', label: 'Asistencia' },
+] as const;
+
+const rollFilterOptions = [
+  { value: 'all', label: 'Todos' },
+  { value: 'unrecorded', label: 'Sin registrar' },
+] as const;
+
+type Busy = ActivityStatus | 'mark-all' | 'finalize' | null;
 
 export default function ActivityDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; tab?: string }>();
+  const id = params.id;
   const { user, refresh } = useAuth();
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState<ActivityStatus | 'mark-all' | 'finalize' | null>(null);
+  const [busy, setBusy] = useState<Busy>(null);
+  // A `tab` in the route wins; otherwise it's picked from the state on the first load and then kept,
+  // so coming back from Editar, Asignar or the attendance form lands on the same tab.
+  const [tab, setTab] = useState<DetailTab | null>(isDetailTab(params.tab) ? params.tab : null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuFor, setMenuFor] = useState<Participant | null>(null);
+  const [cancelling, setCancelling] = useState<Participant | null>(null);
   const [attendanceMessage, setAttendanceMessage] = useState('');
   const [missing, setMissing] = useState<MissingPerson[]>([]);
-  const [cancelling, setCancelling] = useState<Participant | null>(null);
+  const [rollFilter, setRollFilter] = useState<'all' | 'unrecorded'>('all');
+  const [saving, setSaving] = useState<Record<string, true>>({});
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const pending = useRef(false);
+  const savingRows = useRef(new Set<string>());
 
   const load = useCallback(async () => {
     try {
-      setDetail(await getActivity(id));
+      const found = await getActivity(id);
+      setDetail(found);
+      setTab((current) => current ?? defaultTab(activityStep(found.activity)));
       setMessage('');
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
@@ -47,7 +78,7 @@ export default function ActivityDetailScreen() {
     }
   }, [id, refresh]);
 
-  // Reload on focus, so returning from "Editar" or "Asignar" shows the new state.
+  // Reload on focus, so returning from "Editar", "Asignar" or the attendance form shows the new state.
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   async function changeStatus(next: ActivityStatus) {
@@ -97,6 +128,31 @@ export default function ActivityDetailScreen() {
     } finally { pending.current = false; setBusy(null); }
   }
 
+  // One tap: sends only the status and shows the row as the server saved it (never ahead of it),
+  // because attendance becomes official hours.
+  async function quickRecord(entry: Participant, status: Exclude<AttendanceStatus, 'late'>) {
+    if (!detail || savingRows.current.has(entry.assignmentId)) return;
+    // Tapping the status it already has would reset custom times or hours, so it does nothing.
+    if (entry.attendance?.status === status) return;
+    const key = entry.assignmentId;
+    savingRows.current.add(key);
+    setSaving((current) => ({ ...current, [key]: true }));
+    setRowErrors(({ [key]: _, ...rest }) => rest);
+    try {
+      const record = await recordAttendance(detail.activity.id, key, { status });
+      setDetail((current) => current ? {
+        ...current,
+        participants: current.participants.map((item) => (item.assignmentId === key ? { ...item, attendance: record } : item)),
+      } : current);
+    } catch (cause: unknown) {
+      if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
+      setRowErrors((current) => ({ ...current, [key]: apiMessage(cause, 'No pudimos guardar la asistencia. Inténtalo de nuevo.') }));
+    } finally {
+      savingRows.current.delete(key);
+      setSaving(({ [key]: _, ...rest }) => rest);
+    }
+  }
+
   function confirmFinalize() {
     Alert.alert('¿Finalizar la asistencia?',
       'Las horas se vuelven oficiales y cuentan en el total de cada voluntario. La actividad se cierra y ya no se puede asignar a nadie. Después, solo Administración puede corregir un registro.',
@@ -139,87 +195,96 @@ export default function ActivityDetailScreen() {
   }
 
   const { activity, supervisor, participants } = detail;
+  const viewer = { role: user.role, id: user.id };
+  const step = activityStep(activity);
+  const next = nextStep(detail, viewer);
+  const currentTab = tab ?? defaultTab(step);
   const canEdit = roleCan.editActivities(user.role);
   const canAssign = roleCan.assignVolunteers(user.role) && activity.status === 'open';
-  const editable = activity.status === 'draft' || activity.status === 'open';
-  const assigned = participants.filter((entry) => entry.status === 'assigned');
+  const { assigned, recorded, missing: unrecorded } = rollCall(participants);
   const cancelled = participants.filter((entry) => entry.status === 'cancelled');
   const free = activity.capacity - activity.assignedCount;
+  const finalized = activity.attendanceFinalizedAt !== null;
+  // Recording also needs the activity to have started; before that the API refuses it.
+  const canRecord = step === 'attendance' && canRecordOn(detail, viewer);
+  const canCorrect = finalized && roleCan.correctAttendance(user.role);
+  const showFinalizeBar = currentTab === 'asistencia' && canRecord && assigned.length > 0;
+
+  const menuActions: SheetAction[] = [];
+  if (canEdit && (activity.status === 'draft' || activity.status === 'open')) {
+    menuActions.push({
+      testID: 'activity-edit', label: 'Editar datos', icon: { ios: 'pencil', android: 'edit' },
+      onPress: () => router.push({ pathname: '/actividades/[id]/editar', params: { id: activity.id } }),
+    });
+    if (activity.status === 'open' && activity.assignedCount === 0) {
+      menuActions.push({
+        testID: 'activity-unpublish', label: 'Volver a borrador', icon: { ios: 'arrow.uturn.backward', android: 'undo' },
+        onPress: () => confirm('¿Volver a borrador?', 'La actividad deja de estar publicada y no se puede asignar a nadie hasta que la publiques de nuevo.',
+          'Volver a borrador', 'draft'),
+      });
+    }
+    if (activity.status === 'open') {
+      menuActions.push({
+        testID: 'activity-close', label: 'Cerrar inscripciones', icon: { ios: 'checkmark.circle', android: 'task_alt' },
+        onPress: () => confirm('¿Cerrar inscripciones?', 'Ya no se podrá editar ni asignar a nadie. La asistencia se puede tomar y finalizar igual.',
+          'Cerrar inscripciones', 'closed'),
+      });
+    }
+    menuActions.push({
+      testID: 'activity-cancel', label: 'Cancelar actividad', icon: { ios: 'xmark.circle', android: 'event_busy' }, critical: true,
+      onPress: () => confirm('¿Cancelar la actividad?', 'No se puede deshacer. Las asignaciones y su historial se conservan, y la actividad deja de ocupar el horario de esas personas.',
+        'Cancelar actividad', 'cancelled'),
+    });
+  }
+
+  function runNext(kind: NextAction) {
+    if (kind === 'publish') void changeStatus('open');
+    else if (kind === 'assign') router.push({ pathname: '/actividades/[id]/asignar', params: { id: activity.id } });
+    else if (kind === 'take-attendance') setTab('asistencia');
+    else confirmFinalize();
+  }
+
+  const openForm = (entry: Participant, status?: AttendanceStatus) => router.push({
+    pathname: '/actividades/[id]/asistencia/[assignmentId]',
+    params: { id: activity.id, assignmentId: entry.assignmentId, ...(status ? { status } : {}) },
+  });
 
   return (
     <Screen testID="activity-detail-screen" title={activity.name} titleTestID="activity-detail-name" onBack={() => router.back()}
-      band={<ActivityStatusBadge status={activity.status} />}>
+      action={menuActions.length ? (
+        <IconButton testID="activity-menu" icon={{ ios: 'ellipsis', android: 'more_horiz' }} accessibilityLabel="Más acciones"
+          onDark disabled={busy !== null} onPress={() => setMenuOpen(true)} />
+      ) : undefined}
+      band={<ActivityStatusBadge status={activity.status} />}
+      footer={showFinalizeBar ? (
+        <>
+          <Button testID="attendance-finalize" label="Finalizar asistencia" busyLabel="Finalizando…" busy={busy === 'finalize'}
+            disabled={unrecorded > 0 || busy === 'mark-all'} icon={{ ios: 'lock', android: 'lock' }} onPress={confirmFinalize} />
+          {unrecorded > 0 ? (
+            <Text testID="attendance-finalize-hint" style={styles.barHint}>Registra a todos para finalizar (faltan {unrecorded})</Text>
+          ) : null}
+        </>
+      ) : undefined}>
 
-      <Section title="Detalles">
-        <Row icon={{ ios: 'calendar', android: 'event' }} label="Horario" value={formatSchedule(activity.startsAt, activity.endsAt)} />
-        <Row icon={{ ios: 'mappin.and.ellipse', android: 'location_on' }} label="Lugar" value={activity.location} />
-        <Row icon={{ ios: 'person.badge.shield.checkmark', android: 'supervisor_account' }} label="Supervisión"
-          value={supervisor?.fullName ?? 'Sin supervisor'} />
-        {activity.description ? <Row icon={{ ios: 'text.alignleft', android: 'notes' }} label="Descripción" value={activity.description} /> : null}
-        {activity.requirements ? <Row icon={{ ios: 'checklist', android: 'checklist' }} label="Requisitos" value={activity.requirements} /> : null}
-      </Section>
+      {step === 'cancelled' ? null : <ProgressStrip step={step} />}
+      <NextStepCard step={step} next={next} busy={busy === 'open'} busyLabel="Publicando…"
+        onAction={() => { if (next.action) runNext(next.action.kind); }} />
 
       {message ? <View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{message}</Text></View> : null}
 
-      {canEdit && editable ? (
-        <View style={styles.actions}>
-          {activity.status === 'draft' ? (
-            <Button testID="activity-publish" label="Publicar" busyLabel="Publicando…" busy={busy === 'open'}
-              icon={{ ios: 'paperplane', android: 'publish' }} onPress={() => void changeStatus('open')} />
-          ) : null}
-          {activity.status === 'open' ? (
-            <Button testID="activity-close" label="Cerrar actividad" busyLabel="Cerrando…" busy={busy === 'closed'} variant="secondary"
-              icon={{ ios: 'checkmark.circle', android: 'task_alt' }}
-              onPress={() => confirm('¿Cerrar la actividad?', 'Ya no se podrá editar, asignar ni volver a abrir. Las asignaciones se conservan.', 'Cerrar', 'closed')} />
-          ) : null}
-          {activity.status === 'open' && activity.assignedCount === 0 ? (
-            <Button testID="activity-unpublish" label="Volver a borrador" busyLabel="Guardando…" busy={busy === 'draft'} variant="secondary"
-              icon={{ ios: 'arrow.uturn.backward', android: 'undo' }} onPress={() => void changeStatus('draft')} />
-          ) : null}
-          <Button testID="activity-edit" label="Editar datos" variant="secondary" icon={{ ios: 'pencil', android: 'edit' }}
-            onPress={() => router.push({ pathname: '/actividades/[id]/editar', params: { id: activity.id } })} />
-          <Button testID="activity-cancel" label="Cancelar actividad" busyLabel="Cancelando…" busy={busy === 'cancelled'} variant="critical"
-            icon={{ ios: 'xmark.circle', android: 'event_busy' }}
-            onPress={() => confirm('¿Cancelar la actividad?', 'No se puede deshacer. Las asignaciones y su historial se conservan, y la actividad deja de ocupar el horario de esas personas.', 'Cancelar actividad', 'cancelled')} />
-        </View>
-      ) : null}
+      <SegmentedTabs testID="activity-tabs" options={tabOptions} value={currentTab} onChange={setTab} />
 
-      <View style={styles.stats}>
-        <StatCard testID="activity-assigned-count" label="Asignados" value={`${activity.assignedCount}/${activity.capacity}`}
-          caption={free > 0 ? `${free} ${free === 1 ? 'lugar libre' : 'lugares libres'}` : 'Cupo lleno'}
-          icon={{ ios: 'person.2', android: 'group' }} />
-      </View>
+      {currentTab === 'detalles' ? detailsTab() : currentTab === 'participantes' ? participantsTab() : attendanceTab()}
 
-      <Section title="Participantes" bare={assigned.length === 0}
-        footer={activity.status === 'draft' && canEdit ? 'Publica la actividad para poder asignar voluntarios.'
-          : canAssign && free <= 0 ? 'Cupo lleno. Para asignar a alguien más, aumenta el cupo o cancela una asignación.' : undefined}>
-        {assigned.length === 0 ? (
-          <EmptyState icon={{ ios: 'person.2', android: 'group' }} title="Nadie asignado todavía"
-            body={canAssign ? 'Asigna voluntarios activos con el botón “Asignar voluntario”.' : 'Cuando Coordinación asigne voluntarios, aparecerán aquí con su teléfono.'} />
-        ) : assigned.map((entry) => (
-          <Row key={entry.assignmentId} testID={`participant-${entry.volunteerId}`}
-            leading={<Avatar name={`${entry.firstName} ${entry.lastName}`} />}
-            label={`${entry.firstName} ${entry.lastName}`} value={formatPhone(entry.phone)}
-            onPress={() => participantMenu(entry)} />
-        ))}
-      </Section>
-
-      {canAssign && free > 0 ? (
-        <Button testID="activity-assign" label="Asignar voluntario" icon={{ ios: 'person.badge.plus', android: 'person_add' }}
-          onPress={() => router.push({ pathname: '/actividades/[id]/asignar', params: { id: activity.id } })} />
-      ) : null}
-
-      {cancelled.length ? (
-        <Section title="Cancelados">
-          {cancelled.map((entry) => (
-            <Row key={entry.assignmentId} leading={<Avatar name={`${entry.firstName} ${entry.lastName}`} />}
-              label={`${entry.firstName} ${entry.lastName}`} value={entry.cancelledReason ? `Motivo: ${entry.cancelledReason}` : undefined} />
-          ))}
-        </Section>
-      ) : null}
-
-      {attendanceSection()}
-
+      <ActionSheet testID="activity-menu-sheet" visible={menuOpen} title={activity.name} actions={menuActions}
+        onClose={() => setMenuOpen(false)} />
+      <ActionSheet testID="participant-menu-sheet" visible={menuFor !== null}
+        title={menuFor ? `${menuFor.firstName} ${menuFor.lastName}` : ''} subtitle={menuFor ? formatPhone(menuFor.phone) : undefined}
+        actions={menuFor ? [{
+          testID: 'participant-cancel', label: 'Cancelar asignación', icon: { ios: 'person.badge.minus', android: 'person_remove' },
+          critical: true, onPress: () => setCancelling(menuFor),
+        }] : []}
+        onClose={() => setMenuFor(null)} />
       <ReasonDialog testID="cancel-assignment" visible={cancelling !== null}
         title={cancelling ? `¿Cancelar la asignación de ${cancelling.firstName}?` : ''}
         body="Su registro se conserva con el motivo, y le puedes volver a asignar después."
@@ -228,90 +293,154 @@ export default function ActivityDetailScreen() {
     </Screen>
   );
 
-  function attendanceSection() {
-    if (!user) return null;
-    if (activity.status === 'draft' || activity.status === 'cancelled') {
+  function detailsTab() {
+    return (
+      <Section>
+        <Row icon={{ ios: 'calendar', android: 'event' }} label="Horario" value={formatSchedule(activity.startsAt, activity.endsAt)} />
+        <Row icon={{ ios: 'mappin.and.ellipse', android: 'location_on' }} label="Lugar" value={activity.location} />
+        <Row icon={{ ios: 'person.badge.shield.checkmark', android: 'supervisor_account' }} label="Supervisión"
+          value={supervisor?.fullName ?? 'Sin supervisor'} />
+        {activity.description ? <Row icon={{ ios: 'text.alignleft', android: 'notes' }} label="Descripción" value={activity.description} /> : null}
+        {activity.requirements ? <Row icon={{ ios: 'checklist', android: 'checklist' }} label="Requisitos" value={activity.requirements} /> : null}
+      </Section>
+    );
+  }
+
+  function participantsTab() {
+    return (
+      <>
+        <View style={styles.stats}>
+          <StatCard testID="activity-assigned-count" label="Asignados" value={`${activity.assignedCount}/${activity.capacity}`}
+            caption={free > 0 ? `${free} ${free === 1 ? 'lugar libre' : 'lugares libres'}` : 'Cupo lleno'}
+            icon={{ ios: 'person.2', android: 'group' }} />
+        </View>
+
+        {canAssign && free > 0 ? (
+          <Button testID="activity-assign" label="Asignar voluntario" icon={{ ios: 'person.badge.plus', android: 'person_add' }}
+            onPress={() => router.push({ pathname: '/actividades/[id]/asignar', params: { id: activity.id } })} />
+        ) : null}
+
+        <Section title="Asignados" bare={assigned.length === 0}
+          footer={activity.status === 'draft' && canEdit ? 'Publica la actividad para poder asignar voluntarios.'
+            : canAssign && free <= 0 ? 'Cupo lleno. Para asignar a alguien más, aumenta el cupo o cancela una asignación.' : undefined}>
+          {assigned.length === 0 ? (
+            <EmptyState icon={{ ios: 'person.2', android: 'group' }} title="Nadie asignado todavía"
+              body={canAssign ? 'Asigna voluntarios activos con el botón “Asignar voluntario”.' : 'Cuando Coordinación asigne voluntarios, aparecerán aquí con su teléfono.'} />
+          ) : assigned.map((entry) => {
+            const name = `${entry.firstName} ${entry.lastName}`;
+            return (
+              <Row key={entry.assignmentId} testID={`participant-${entry.volunteerId}`} leading={<Avatar name={name} />}
+                label={name} value={formatPhone(entry.phone)}
+                trailing={(
+                  <View style={styles.rowActions}>
+                    <IconButton testID={`participant-${entry.volunteerId}-call`} icon={{ ios: 'phone', android: 'call' }}
+                      accessibilityLabel={`Llamar a ${name}`} onPress={() => void Linking.openURL(`tel:${entry.phone}`)} />
+                    {canAssign ? (
+                      <IconButton testID={`participant-${entry.volunteerId}-menu`} icon={{ ios: 'ellipsis', android: 'more_horiz' }}
+                        accessibilityLabel={`Más acciones para ${name}`} onPress={() => setMenuFor(entry)} />
+                    ) : null}
+                  </View>
+                )} />
+            );
+          })}
+        </Section>
+
+        {cancelled.length ? (
+          <Section title="Cancelados">
+            {cancelled.map((entry) => (
+              <Row key={entry.assignmentId} leading={<Avatar name={`${entry.firstName} ${entry.lastName}`} />}
+                label={`${entry.firstName} ${entry.lastName}`} value={entry.cancelledReason ? `Motivo: ${entry.cancelledReason}` : undefined} />
+            ))}
+          </Section>
+        ) : null}
+      </>
+    );
+  }
+
+  function attendanceTab() {
+    if (step === 'draft' || step === 'cancelled') {
       return (
-        <Section title="Asistencia" footer={activity.status === 'draft'
-          ? 'La asistencia se registra cuando la actividad está publicada y ya empezó.'
-          : 'Una actividad cancelada no lleva asistencia.'} bare>{null}</Section>
+        <EmptyState icon={{ ios: 'checklist', android: 'fact_check' }}
+          title={step === 'draft' ? 'Todavía no hay asistencia' : 'Sin asistencia'}
+          body={step === 'draft' ? 'La asistencia se registra cuando la actividad está publicada y ya empezó.' : 'Una actividad cancelada no lleva asistencia.'} />
       );
     }
-    if (new Date(activity.startsAt) > new Date()) {
+    if (step === 'published') {
       return (
-        <Section title="Asistencia" bare>
-          <EmptyState icon={{ ios: 'clock', android: 'schedule' }} title="La asistencia se abre al empezar"
-            body={`Podrás marcar quién asistió a partir del ${formatDateTime(activity.startsAt)}.`} />
-        </Section>
+        <EmptyState icon={{ ios: 'clock', android: 'schedule' }} title="La asistencia se abre al empezar"
+          body={`Podrás marcar quién asistió a partir del ${formatDateTime(activity.startsAt)}.`} />
       );
     }
     if (assigned.length === 0) {
       return (
-        <Section title="Asistencia" bare>
-          <EmptyState icon={{ ios: 'checklist', android: 'fact_check' }} title="Nadie a quien tomar asistencia"
-            body="La asistencia se registra para las personas asignadas. Asigna voluntarios para poder tomarla." />
-        </Section>
+        <EmptyState icon={{ ios: 'checklist', android: 'fact_check' }} title="Nadie a quien tomar asistencia"
+          body="La asistencia se registra para las personas asignadas. Sin nadie asignado, no hay horas que contar." />
       );
     }
-    const finalized = activity.attendanceFinalizedAt !== null;
-    const canRecord = !finalized && roleCan.recordAttendance(user.role, activity.supervisorId, user.id);
-    const canCorrect = finalized && roleCan.correctAttendance(user.role);
-    const recorded = assigned.filter((entry) => entry.attendance !== null).length;
-    const footer = activity.attendanceFinalizedAt
-      ? `Asistencia finalizada el ${formatDateTime(activity.attendanceFinalizedAt)}${canCorrect ? ' Toca a una persona para corregir su registro.' : ''}`
-      : `${recorded} de ${assigned.length} registrados.${canRecord ? ' Toca a una persona para registrar o cambiar su asistencia.' : ''}`;
-    const open = (entry: Participant) => router.push({
-      pathname: '/actividades/[id]/asistencia/[assignmentId]', params: { id: activity.id, assignmentId: entry.assignmentId },
-    });
+
+    const shown = rollFilter === 'unrecorded' && !finalized ? assigned.filter((entry) => entry.attendance === null) : assigned;
+    const locked = busy === 'mark-all' || busy === 'finalize';
+
     return (
       <>
-        <Section title="Asistencia" footer={footer}>
-          {assigned.map((entry) => (
-            <Row key={entry.assignmentId} testID={`attendance-${entry.volunteerId}`}
-              leading={<Avatar name={`${entry.firstName} ${entry.lastName}`} />}
-              label={`${entry.firstName} ${entry.lastName}`}
-              value={entry.attendance ? `${hoursText(entry.attendance.hours)} h${entry.attendance.correctionReason ? ' · corregido' : ''}` : undefined}
-              trailing={entry.attendance
-                ? <StatusBadge label={attendanceStatusLabels[entry.attendance.status]} tone={attendanceTones[entry.attendance.status]} />
-                : <StatusBadge label="Sin registrar" tone="neutral" />}
-              onPress={canRecord || canCorrect ? () => open(entry) : undefined} />
+        {finalized && activity.attendanceFinalizedAt ? (
+          <View testID="attendance-finalized" style={styles.summary}>
+            <Text style={styles.summaryValue}>{hoursText(countedHours(participants))} h contadas</Text>
+            <Text style={styles.summaryText}>Asistencia finalizada el {formatDateTime(activity.attendanceFinalizedAt)}.</Text>
+            {canCorrect ? <Text style={styles.summaryText}>Toca a una persona para corregir su registro.</Text> : null}
+          </View>
+        ) : (
+          <View style={styles.rollHeader}>
+            <Text testID="attendance-progress" accessibilityLiveRegion="polite" style={styles.progress}>
+              {recorded} de {assigned.length} registrados
+            </Text>
+            <FilterChips testID="attendance-filter" options={rollFilterOptions} value={rollFilter} onChange={setRollFilter} />
+          </View>
+        )}
+
+        <Section bare={shown.length === 0}
+          footer={canRecord ? 'Presente y Falta se guardan al tocarlos. Tarde, o tocar el nombre, abre el registro con horario y horas.' : undefined}>
+          {shown.length === 0 ? (
+            <EmptyState icon={{ ios: 'checkmark.circle', android: 'task_alt' }} title="Todos registrados"
+              body="Ya registraste a todas las personas asignadas. Revisa la lista completa en “Todos” o finaliza la asistencia." />
+          ) : shown.map((entry) => (
+            <RollCallRow key={entry.assignmentId} entry={entry} recording={canRecord} busy={Boolean(saving[entry.assignmentId])}
+              locked={locked} error={rowErrors[entry.assignmentId]}
+              onChoose={(status) => {
+                if (status === 'late') openForm(entry, 'late');
+                else void quickRecord(entry, status);
+              }}
+              onOpen={canRecord || canCorrect ? () => openForm(entry) : undefined} />
           ))}
         </Section>
+
         {attendanceMessage ? (
           <View accessibilityRole="alert" style={styles.alert}>
             <Text style={styles.alertText}>{attendanceMessage}</Text>
             {missing.map((person) => <Text key={person.assignmentId} style={styles.alertText}>· {person.firstName} {person.lastName}</Text>)}
           </View>
         ) : null}
-        {canRecord ? (
-          <View style={styles.actions}>
-            {recorded < assigned.length ? (
-              <Button testID="attendance-mark-all" label="Marcar todos presentes" busyLabel="Marcando…" busy={busy === 'mark-all'}
-                variant="secondary" icon={{ ios: 'checkmark.circle', android: 'done_all' }} onPress={() => void markAll()} />
-            ) : null}
-            <Button testID="attendance-finalize" label="Finalizar asistencia" busyLabel="Finalizando…" busy={busy === 'finalize'}
-              icon={{ ios: 'lock', android: 'lock' }} onPress={confirmFinalize} />
-          </View>
+
+        {canRecord && unrecorded > 0 ? (
+          <Button testID="attendance-mark-all" label="Marcar todos presentes" busyLabel="Marcando…" busy={busy === 'mark-all'}
+            disabled={busy === 'finalize'} variant="secondary" icon={{ ios: 'checkmark.circle', android: 'done_all' }}
+            onPress={() => void markAll()} />
         ) : null}
       </>
     );
-  }
-
-  // Tapping a participant offers the actions for them: call, or cancel their assignment.
-  function participantMenu(entry: Participant) {
-    const options: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [
-      { text: 'Llamar', onPress: () => void Linking.openURL(`tel:${entry.phone}`) },
-    ];
-    if (canAssign) options.push({ text: 'Cancelar asignación', style: 'destructive', onPress: () => setCancelling(entry) });
-    options.push({ text: 'Volver', style: 'cancel' });
-    Alert.alert(`${entry.firstName} ${entry.lastName}`, formatPhone(entry.phone), options);
   }
 }
 
 const styles = StyleSheet.create({
   block: { gap: 16 },
   stats: { flexDirection: 'row', gap: 12 },
-  actions: { gap: 12 },
+  rowActions: { flexDirection: 'row', gap: 8 },
+  rollHeader: { gap: 10 },
+  progress: { fontFamily: AppFonts.headingSemiBold, fontSize: 18, color: Brand.text, paddingHorizontal: 4 },
+  summary: { gap: 4, padding: 16, borderRadius: Radius.card, backgroundColor: Brand.primaryLight },
+  summaryValue: { fontFamily: AppFonts.heading, fontSize: 24, color: Brand.text, letterSpacing: -0.4 },
+  summaryText: { fontFamily: AppFonts.body, fontSize: 14, lineHeight: 20, color: Brand.textSecondary },
+  barHint: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textSecondary, textAlign: 'center' },
   alert: { gap: 4, backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
 });

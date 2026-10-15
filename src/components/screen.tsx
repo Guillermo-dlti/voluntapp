@@ -20,6 +20,8 @@ interface ScreenProps {
   band?: ReactNode;
   // Rendered above the sheet, not inside its scroll view: a Fab goes here.
   floating?: ReactNode;
+  // A bar fixed at the bottom of the sheet, under the scrolling content, for a sticky action.
+  footer?: ReactNode;
   // false when the screen brings its own list (FlatList), so lists aren't nested in a ScrollView.
   scroll?: boolean;
   // Pull to refresh.
@@ -32,7 +34,7 @@ interface ScreenProps {
 
 // Every tab: a forest band with a large left-aligned title, and the content on a rounded sheet
 // that overlaps it. The contrast between band and sheet is what gives the app its depth.
-export function Screen({ testID, title, titleTestID, onBack, eyebrow, subtitle, action, band, floating, scroll = true, refreshing = false, onRefresh, onEndReached, children }: ScreenProps) {
+export function Screen({ testID, title, titleTestID, onBack, eyebrow, subtitle, action, band, floating, footer, scroll = true, refreshing = false, onRefresh, onEndReached, children }: ScreenProps) {
   return (
     <View testID={testID} style={styles.root}>
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.band}>
@@ -63,6 +65,7 @@ export function Screen({ testID, title, titleTestID, onBack, eyebrow, subtitle, 
             {children}
           </ScrollView>
         ) : children}
+        {footer ? <View style={styles.footer}>{footer}</View> : null}
         {floating}
       </View>
     </View>
@@ -82,6 +85,10 @@ const styles = StyleSheet.create({
   bandExtra: { marginTop: 12, gap: 12 },
   sheet: { flex: 1, backgroundColor: Brand.background, borderTopLeftRadius: Radius.sheet, borderTopRightRadius: Radius.sheet, overflow: 'hidden' },
   content: { padding: 20, paddingTop: 24, paddingBottom: 40, gap: 28 },
+  footer: {
+    gap: 8, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Brand.border, backgroundColor: Brand.surface,
+  },
   // Keeps the last row reachable above a floating button.
   roomForFab: { paddingBottom: 110 },
 });

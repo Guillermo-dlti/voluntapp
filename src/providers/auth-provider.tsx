@@ -20,6 +20,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthContextValue['status']>('loading');
   const [error, setError] = useState('');
   const tokenRef = useRef<string | null>(null);
+  const userRef = useRef<Staff | null>(null);
+  useEffect(() => { userRef.current = user; }, [user]);
   const generation = useRef(0);
   const refreshing = useRef(false);
 
@@ -46,6 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setError('Tu sesión terminó. Inicia sesión de nuevo.');
           setStatus('ready');
         } catch { setError('No pudimos borrar la sesión anterior. Inténtalo de nuevo.'); setStatus('error'); }
+      } else if (userRef.current) {
+        // Already signed in and the check failed for a reason other than 401 (no connection, timeout):
+        // keep the screen and the user. Coming back from the folder picker offline used to wipe the
+        // screen; the request that needs the network shows its own message instead.
+        setStatus('ready');
       } else { setError(authMessage(cause)); setStatus('error'); }
     } finally { refreshing.current = false; }
   }, []);

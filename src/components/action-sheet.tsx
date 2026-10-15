@@ -1,0 +1,98 @@
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { SlideInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Button } from '@/components/button';
+import { Icon } from '@/components/icon';
+import { AppFonts, Brand, Elevation, Radius } from '@/constants/theme';
+
+export interface SheetAction {
+  label: string;
+  icon: Parameters<typeof Icon>[0]['name'];
+  onPress: () => void;
+  // Cancel or deactivate: shown in the danger color.
+  critical?: boolean;
+  // A second, quieter line under the label.
+  detail?: string;
+  // Shown but not pressable (such as a file with no rows).
+  disabled?: boolean;
+  testID?: string;
+}
+
+interface ActionSheetProps {
+  visible: boolean;
+  title: string;
+  subtitle?: string;
+  actions: SheetAction[];
+  onClose: () => void;
+  testID?: string;
+}
+
+// A menu that slides up from the bottom. Android's Alert fits at most three buttons, and the
+// activity menu can need four plus "Volver".
+export function ActionSheet({ visible, title, subtitle, actions, onClose, testID }: ActionSheetProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
+      <View style={styles.backdrop}>
+        <Pressable accessibilityLabel="Cerrar menú" style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Animated.View testID={testID} entering={SlideInDown.duration(220)}
+          style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
+          <View style={styles.handle} />
+          <View style={styles.heading}>
+            <Text accessibilityRole="header" style={styles.title} numberOfLines={2}>{title}</Text>
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          </View>
+          <View style={styles.list}>
+            {actions.map((action, index) => (
+              <View key={action.label}>
+                {index > 0 ? <View style={styles.hairline} /> : null}
+                <Pressable testID={action.testID} accessibilityRole="button" android_ripple={{ color: Brand.surfaceMuted }}
+                  accessibilityState={{ disabled: !!action.disabled }} disabled={action.disabled}
+                  onPress={() => { onClose(); action.onPress(); }}
+                  style={({ pressed }) => [styles.row, pressed && process.env.EXPO_OS !== 'android' && styles.pressed, action.disabled && styles.disabled]}>
+                  <View style={[styles.iconWell, action.critical && styles.iconWellCritical]}>
+                    <Icon name={action.icon} size={18} color={action.critical ? Brand.danger : Brand.primary} />
+                  </View>
+                  <View style={styles.text}>
+                    <Text style={[styles.label, action.critical && styles.labelCritical]}>{action.label}</Text>
+                    {action.detail ? <Text style={styles.detail}>{action.detail}</Text> : null}
+                  </View>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+          <Button testID={testID ? `${testID}-close` : undefined} label="Volver" variant="secondary" onPress={onClose} />
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: Brand.scrim },
+  sheet: {
+    gap: 16,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    borderTopLeftRadius: Radius.sheet,
+    borderTopRightRadius: Radius.sheet,
+    backgroundColor: Brand.surface,
+    boxShadow: Elevation.raised,
+  },
+  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: Brand.border },
+  heading: { gap: 4, paddingHorizontal: 4 },
+  title: { fontFamily: AppFonts.heading, fontSize: 20, color: Brand.text },
+  subtitle: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },
+  list: { borderRadius: Radius.card, borderWidth: 1, borderColor: Brand.border, overflow: 'hidden' },
+  hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.border, marginLeft: 64 },
+  row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10 },
+  pressed: { backgroundColor: Brand.surfaceMuted },
+  iconWell: { width: 34, height: 34, borderRadius: 10, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  iconWellCritical: { backgroundColor: Brand.dangerLight },
+  disabled: { opacity: 0.5 },
+  text: { flex: 1, gap: 2 },
+  detail: { fontFamily: AppFonts.body, fontSize: 13, lineHeight: 18, color: Brand.textSecondary },
+  label: { fontFamily: AppFonts.body, fontSize: 16, color: Brand.text },
+  labelCritical: { color: Brand.danger },
+});

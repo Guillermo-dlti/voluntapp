@@ -61,7 +61,7 @@ const statusSchema = z.strictObject({ status: z.enum(['draft', 'open', 'closed',
 const assignSchema = z.strictObject({ volunteerId: objectIdText });
 const cancelSchema = z.strictObject({ reason: z.string().trim().min(3).max(500).regex(noControlChars) });
 const listSchema = z.object({
-  when: z.enum(['upcoming', 'past', 'cancelled', 'all']).default('upcoming'),
+  when: z.enum(['upcoming', 'pending', 'past', 'cancelled', 'all']).default('upcoming'),
   q: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
@@ -143,17 +143,20 @@ function publicAssignment(assignment: Assignment) {
   };
 }
 
-function listQuery(when: 'upcoming' | 'past' | 'cancelled' | 'all', q: string | undefined) {
+function listQuery(when: z.infer<typeof listSchema>['when'], q: string | undefined) {
   const now = new Date();
   const live: Status[] = ['draft', 'open'];
   let filter: Filter<Activity>;
   if (when === 'upcoming') filter = { status: { $in: live }, endsAt: { $gt: now } };
+  // Exactly what the finalize endpoint accepts and what reports count as pending: started, open or
+  // closed, attendance not finalized. Oldest first, since those hours have waited longest.
+  else if (when === 'pending') filter = { status: { $in: ['open', 'closed'] }, startsAt: { $lte: now }, attendanceFinalizedAt: { $exists: false } };
   else if (when === 'past') filter = { $or: [{ status: 'closed' }, { status: { $in: live }, endsAt: { $lte: now } }] };
   else if (when === 'cancelled') filter = { status: 'cancelled' };
   else filter = {};
   const words = searchWords(q);
   if (words.length) filter = { $and: [filter, ...words.map((word) => ({ name: searchPattern(word) }))] };
-  const direction = when === 'upcoming' ? 1 : -1;
+  const direction = when === 'upcoming' || when === 'pending' ? 1 : -1;
   return { filter, sort: { startsAt: direction, _id: direction } as const };
 }
 
@@ -222,7 +225,7 @@ export function activitiesRouter(collections: V2Collections, client: MongoClient
     const { when, q, page } = parsed.data;
     const { filter, sort } = listQuery(when, q);
     const found = await activities.find(filter, {
-      projection: { name: 1, location: 1, startsAt: 1, endsAt: 1, capacity: 1, assignedCount: 1, status: 1 },
+      projection: { name: 1, location: 1, startsAt: 1, endsAt: 1, capacity: 1, assignedCount: 1, status: 1, attendanceFinalizedAt: 1 },
       sort,
       skip: (page - 1) * PAGE_SIZE,
       limit: PAGE_SIZE + 1,
@@ -237,6 +240,7 @@ export function activitiesRouter(collections: V2Collections, client: MongoClient
         capacity: activity.capacity,
         assignedCount: activity.assignedCount,
         status: activity.status,
+        attendanceFinalizedAt: activity.attendanceFinalizedAt?.toISOString() ?? null,
       })),
       page,
       hasMore: found.length > PAGE_SIZE,

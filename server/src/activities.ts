@@ -122,7 +122,7 @@ export function publicActivity(activity: Activity) {
   };
 }
 
-type AttendanceView = Pick<Attendance, 'status' | 'checkInAt' | 'checkOutAt' | 'hours' | 'finalized' | 'correctionReason'>;
+type AttendanceView = Pick<Attendance, 'status' | 'checkInAt' | 'checkOutAt' | 'hours' | 'finalized' | 'correctionReason' | 'method'>;
 
 export function publicAttendance(record: AttendanceView) {
   return {
@@ -132,6 +132,7 @@ export function publicAttendance(record: AttendanceView) {
     hours: record.hours,
     finalized: record.finalized,
     correctionReason: record.correctionReason ?? null,
+    method: record.method ?? 'manual',
   };
 }
 
@@ -324,7 +325,7 @@ export function activitiesRouter(collections: V2Collections, client: MongoClient
       { $unwind: '$volunteer' },
       { $lookup: {
         from: 'attendance', localField: '_id', foreignField: 'assignmentId', as: 'attendance',
-        pipeline: [{ $project: { status: 1, checkInAt: 1, checkOutAt: 1, hours: 1, finalized: 1, correctionReason: 1 } }],
+        pipeline: [{ $project: { status: 1, checkInAt: 1, checkOutAt: 1, hours: 1, finalized: 1, correctionReason: 1, method: 1 } }],
       } },
       { $unwind: { path: '$attendance', preserveNullAndEmptyArrays: true } },
       // 'assigned' sorts before 'cancelled', so assigned people come first.

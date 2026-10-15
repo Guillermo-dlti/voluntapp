@@ -35,6 +35,8 @@ export interface AttendanceRecord {
   hours: number;
   finalized: boolean;
   correctionReason: string | null;
+  // How the last write came in: a QR scan or by hand.
+  method: 'qr' | 'manual';
 }
 
 export interface Participant {
@@ -94,7 +96,8 @@ const attendanceStatuses: readonly unknown[] = ['present', 'late', 'absent'];
 
 function isAttendance(value: unknown): value is AttendanceRecord {
   return isRecord(value) && attendanceStatuses.includes(value.status) && strOrNull(value.checkInAt) && strOrNull(value.checkOutAt)
-    && num(value.hours) && typeof value.finalized === 'boolean' && strOrNull(value.correctionReason);
+    && num(value.hours) && typeof value.finalized === 'boolean' && strOrNull(value.correctionReason)
+    && (value.method === 'qr' || value.method === 'manual');
 }
 
 function isParticipant(value: unknown): value is Participant {
@@ -212,4 +215,36 @@ export function dateConflicts(error: unknown): DateConflict[] {
   if (!(error instanceof ApiError) || !isRecord(error.body) || !Array.isArray(error.body.conflicts)) return [];
   return error.body.conflicts.filter((entry): entry is DateConflict =>
     isRecord(entry) && str(entry.volunteerId) && str(entry.volunteerName) && str(entry.activityId) && str(entry.activityName));
+}
+
+export type CheckInOutcome = 'checked_in' | 'already' | 'not_assigned' | 'inactive' | 'invalid' | 'refused' | 'offline';
+
+export interface CheckInResult {
+  outcome: CheckInOutcome;
+  // The server's sentence for staff; the scanner only picks the banner color from the outcome.
+  message: string;
+  // Present only when the scan reached the roll call (checked in or already recorded).
+  counts: { recorded: number; assigned: number } | null;
+}
+
+const answeredOutcomes: readonly CheckInOutcome[] = ['checked_in', 'already', 'not_assigned', 'inactive', 'invalid'];
+const isOutcome = (value: unknown): value is CheckInOutcome => answeredOutcomes.some((outcome) => outcome === value);
+
+// Records attendance from a volunteer's QR. Refusals come back as a result rather than an error, so the
+// scanner can show them and keep the camera open; only a 401 is thrown, for the screen to sign out.
+export async function checkIn(activityId: string, token: string): Promise<CheckInResult> {
+  let result: unknown;
+  try {
+    result = await apiRequest(`${path(activityId)}/attendance/check-in`, {
+      method: 'POST', body: { token }, messages: { 429: 'Demasiados escaneos seguidos. Espera un minuto y vuelve a escanear.' },
+    });
+  } catch (cause: unknown) {
+    if (!(cause instanceof ApiError) || cause.status === 401) throw cause;
+    if (cause.status === 0) return { outcome: 'offline', message: 'No hay conexión. Vuelve a escanear.', counts: null };
+    const outcome = isRecord(cause.body) && isOutcome(cause.body.outcome) ? cause.body.outcome : 'refused';
+    return { outcome, message: cause.message, counts: null };
+  }
+  if (!isRecord(result) || !isOutcome(result.outcome) || typeof result.message !== 'string' || !isRecord(result.counts)
+    || !num(result.counts.recorded) || !num(result.counts.assigned)) throw malformed();
+  return { outcome: result.outcome, message: result.message, counts: { recorded: result.counts.recorded, assigned: result.counts.assigned } };
 }

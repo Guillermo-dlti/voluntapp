@@ -12,7 +12,9 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "seed:staff": "tsx src/seed-staff.ts",
-    "seed:demo": "tsx src/seed-demo.ts"
+    "seed:demo": "tsx src/seed-demo.ts",
+    "seed:qr": "tsx src/seed-qr-demo.ts",
+    "backfill:checkin": "tsx src/backfill-checkin-tokens.ts"
   },
   "dependencies": {
     "argon2": "^0.45.1",
@@ -26,6 +28,8 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.2",
+    "@types/qrcode": "^1.5.6",
+    "qrcode": "^1.5.4",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

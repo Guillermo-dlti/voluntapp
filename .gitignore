@@ -48,3 +48,6 @@ example
 # generated native folders
 /ios
 /android
+
+# QR demo page: real names and working check in codes (npm run server:seed:qr)
+server/demo-qr.html

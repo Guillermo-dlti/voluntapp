@@ -1,8 +1,10 @@
 import { Router, type Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { ObjectId, type ClientSession, type MongoClient } from 'mongodb';
 import { z } from 'zod';
 import { attendanceOpened, publicActivity, publicAttendance } from './activities.js';
 import { writeAudit } from './audit.js';
+import { CHECKIN_TOKEN_PATTERN } from './checkin-token.js';
 import type { Activity, Attendance, V2Collections } from './collections.js';
 import { answering, conflict, HttpError, inTransaction, jsonBody, noControlChars, parseId } from './common.js';
 import { log } from './logger.js';
@@ -10,6 +12,8 @@ import { canOnActivity, type Capability } from './permissions.js';
 import { currentStaff, requireStaff, type AuthenticatedStaff } from './session.js';
 
 const HOUR_MS = 60 * 60 * 1000;
+// A QR scan this long after the start time records the volunteer as late.
+const LATE_AFTER_MINUTES = 15;
 
 const fieldMessages = {
   status: 'Elige si asistió, llegó tarde o faltó.',
@@ -31,6 +35,11 @@ const recordFields = {
 const recordSchema = z.strictObject(recordFields);
 const correctSchema = z.strictObject({ ...recordFields, reason: z.string().trim().min(3).max(500).regex(noControlChars) });
 type RecordInput = z.infer<typeof recordSchema>;
+const checkInSchema = z.strictObject({ token: z.string().regex(CHECKIN_TOKEN_PATTERN) });
+
+const statusWords: Record<Attendance['status'], string> = { present: 'Presente', late: 'Llegó tarde', absent: 'Falta' };
+// A junk QR and an unknown token answer the same, so a scan can't tell which codes exist.
+const invalidCode = { outcome: 'invalid', message: 'Código no válido', volunteer: null, attendance: null };
 
 const notFound = { message: 'No encontramos esa actividad. Puede que el enlace ya no sea válido.' };
 const assignmentNotFound = { message: 'No encontramos esa asignación. Actualiza la actividad e inténtalo de nuevo.' };
@@ -164,7 +173,7 @@ export function attendanceRouter(collections: V2Collections, client: MongoClient
           const { set, unset } = valuesUpdate(values);
           const after = await attendance.findOneAndUpdate(
             { _id: before._id, finalized: false },
-            { $set: { ...set, recordedBy: staff.id, updatedAt: now }, ...(Object.keys(unset).length ? { $unset: unset } : {}) },
+            { $set: { ...set, method: 'manual', recordedBy: staff.id, updatedAt: now }, ...(Object.keys(unset).length ? { $unset: unset } : {}) },
             { session, returnDocument: 'after' },
           );
           if (!after) throw conflict('La asistencia de esta actividad ya está finalizada. Solo Administración puede corregirla.');
@@ -178,6 +187,7 @@ export function attendanceRouter(collections: V2Collections, client: MongoClient
           ...(values.checkInAt ? { checkInAt: values.checkInAt } : {}),
           ...(values.checkOutAt ? { checkOutAt: values.checkOutAt } : {}),
           hours: values.hours,
+          method: 'manual',
           recordedBy: staff.id,
           finalized: false,
           createdAt: now,
@@ -233,7 +243,7 @@ export function attendanceRouter(collections: V2Collections, client: MongoClient
         const done = new Set(recorded.map((entry) => entry.assignmentId.toHexString()));
         const hours = attendanceValues({ status: 'present' }, activity).hours;
         const records: Attendance[] = assigned.filter((entry) => !done.has(entry._id.toHexString())).map((entry) => ({
-          _id: new ObjectId(), assignmentId: entry._id, status: 'present', hours, recordedBy: staff.id, finalized: false, createdAt: now, updatedAt: now,
+          _id: new ObjectId(), assignmentId: entry._id, status: 'present', hours, method: 'manual', recordedBy: staff.id, finalized: false, createdAt: now, updatedAt: now,
         }));
         if (!records.length) return 0;
         await attendance.insertMany(records, { session });
@@ -244,6 +254,99 @@ export function attendanceRouter(collections: V2Collections, client: MongoClient
       });
       log.info('attendance_marked_all_present', { activityId: activityId.toHexString(), created, staffId: staff.id.toHexString() });
       response.json({ created });
+    });
+  });
+
+  // Records attendance from a volunteer's QR. Only the token arrives, so the server resolves the volunteer,
+  // their assignment and the times itself, behind the same gate and audit as the roll call. It only ever
+  // inserts: a volunteer who already has a record answers 'already' and nothing changes.
+  const checkInLimit = rateLimit({
+    windowMs: 60 * 1000, limit: 60, standardHeaders: 'draft-8', legacyHeaders: false,
+    keyGenerator: (_request, response) => currentStaff(response).id.toHexString(),
+    message: { message: 'Demasiados escaneos seguidos. Espera un minuto y vuelve a escanear.' },
+  });
+
+  router.post('/:id/attendance/check-in', requireStaff(staffUsers, 'attendance.record'), checkInLimit, async (request, response) => {
+    const activityId = parseId(request.params.id);
+    if (!activityId) { response.status(404).json(notFound); return; }
+    if (!jsonBody(request, response)) return;
+    const staff = currentStaff(response);
+    const parsed = checkInSchema.safeParse(request.body);
+    if (!parsed.success) {
+      log.info('attendance_checkin', { activityId: activityId.toHexString(), staffId: staff.id.toHexString(), outcome: 'invalid' });
+      response.status(404).json(invalidCode);
+      return;
+    }
+    const now = new Date();
+    await answering(response, async () => {
+      try {
+        const result = await transaction(async (session) => {
+          const activity = await loadActivity(activityId, staff, 'attendance.record', session);
+          await stampOpen(activity, now, session);
+          if (now >= activity.endsAt) throw conflict('La actividad ya terminó. Registra la asistencia en la lista.');
+          const volunteer = await volunteers.findOne({ checkinToken: parsed.data.token }, { session, projection: { firstName: 1, lastName: 1, status: 1 } });
+          if (!volunteer) throw new HttpError(404, invalidCode);
+          const name = `${volunteer.firstName} ${volunteer.lastName}`;
+          const assignment = await assignments.findOne({ volunteerId: volunteer._id, activityId, status: 'assigned' }, { session });
+          if (!assignment) {
+            throw conflict(`${name} no tiene lugar en esta actividad.`, { outcome: 'not_assigned', volunteer: { name }, attendance: null });
+          }
+          if (volunteer.status === 'inactive') {
+            throw conflict(`${name} tiene el registro inactivo. Reactívalo en Voluntarios para registrar su asistencia.`,
+              { outcome: 'inactive', volunteer: { name }, attendance: null });
+          }
+
+          const counts = async () => {
+            const assigned = await assignments.find({ activityId, status: 'assigned' }, { session, projection: { _id: 1 } }).toArray();
+            const recorded = await attendance.countDocuments({ assignmentId: { $in: assigned.map((entry) => entry._id) } }, { session });
+            return { recorded, assigned: activity.assignedCount };
+          };
+          const existing = await attendance.findOne({ assignmentId: assignment._id }, { session });
+          if (existing) {
+            return { created: null, outcome: 'already' as const, name, record: existing, counts: await counts() };
+          }
+
+          // Early scans (attendance started before the start time) count from the start, keeping spec 0005's
+          // "times inside the schedule" rule.
+          const checkInAt = now < activity.startsAt ? activity.startsAt : now;
+          const status = now.getTime() > activity.startsAt.getTime() + LATE_AFTER_MINUTES * 60_000 ? 'late' : 'present';
+          const values = attendanceValues({ status, checkInAt: checkInAt.toISOString(), checkOutAt: activity.endsAt.toISOString() }, activity);
+          const inserted: Attendance = {
+            _id: new ObjectId(),
+            assignmentId: assignment._id,
+            status: values.status,
+            ...(values.checkInAt ? { checkInAt: values.checkInAt } : {}),
+            ...(values.checkOutAt ? { checkOutAt: values.checkOutAt } : {}),
+            hours: values.hours,
+            method: 'qr',
+            recordedBy: staff.id,
+            finalized: false,
+            createdAt: now,
+            updatedAt: now,
+          };
+          await attendance.insertOne(inserted, { session });
+          await writeAudit(collections, { actorId: staff.id, action: 'insert', collection: 'attendance', recordId: inserted._id, after: inserted }, session);
+          return { created: inserted._id, outcome: 'checked_in' as const, name, record: inserted, counts: await counts() };
+        });
+        log.info('attendance_checkin', {
+          activityId: activityId.toHexString(), staffId: staff.id.toHexString(), outcome: result.outcome,
+          ...(result.created ? { attendanceId: result.created.toHexString() } : {}),
+        });
+        const word = statusWords[result.record.status];
+        response.status(result.created ? 201 : 200).json({
+          outcome: result.outcome,
+          message: result.created ? `${result.name} · ${word}` : `${result.name} · Ya registrado · ${word}`,
+          volunteer: { name: result.name },
+          attendance: { status: result.record.status, checkInAt: result.record.checkInAt?.toISOString() ?? null },
+          counts: result.counts,
+        });
+      } catch (error: unknown) {
+        if (error instanceof HttpError) {
+          const outcome = typeof error.body.outcome === 'string' ? error.body.outcome : `refused_${error.status}`;
+          log.info('attendance_checkin', { activityId: activityId.toHexString(), staffId: staff.id.toHexString(), outcome });
+        }
+        throw error;
+      }
     });
   });
 
@@ -325,7 +428,7 @@ export function attendanceRouter(collections: V2Collections, client: MongoClient
         const after = await attendance.findOneAndUpdate(
           { _id: before._id, finalized: true },
           {
-            $set: { ...set, correctionReason: reason, correctedAt: now, correctedBy: staff.id, updatedAt: now },
+            $set: { ...set, method: 'manual', correctionReason: reason, correctedAt: now, correctedBy: staff.id, updatedAt: now },
             ...(Object.keys(unset).length ? { $unset: unset } : {}),
           },
           { session, returnDocument: 'after' },

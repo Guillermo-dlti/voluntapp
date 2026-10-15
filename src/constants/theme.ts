@@ -43,6 +43,8 @@ export const Brand = {
   successLight: '#E6F2E7',
   // Dims the screen behind a dialog.
   scrim: 'rgba(21, 33, 26, 0.45)',
+  // Darker scrim under text laid over the camera, so it reads on any background.
+  scrimStrong: 'rgba(21, 33, 26, 0.7)',
 } as const;
 
 // Radius follows hierarchy: sheets are softest, grouped sections next, controls tightest.

@@ -198,6 +198,22 @@ Branch: `feature/ui-polish`. UI only: no API, auth or schema change, no new depe
 - [ ] Verify on web: blocked. `localhost:8081` answers 500 (`addCustomSourceTransformer` of undefined in static rendering), already the case on `main`; `expo install --check` lists outdated Expo packages (`expo-router` 57.0.17, expected ~57.0.27), the likely cause
 - [ ] Known limit: the NativeTabs bar labels truncate at font scale 2 (native Android tab bar, not styleable from React)
 
+Design review against Mobbin references (Shopify, Apple Health, Luma, Flighty, WhatsApp, Teams), approved and built in groups. Before and after screenshots are on the review page.
+
+- [x] Tokens: `Type` scale and `Spacing` (with `gutter`) in `theme.ts`, every screen and shared component on them; unused Expo template files removed (`themed-*`, `use-theme`, `use-color-scheme`, `ui/collapsible`, `web-badge`, `external-link`, `hint-row`)
+- [x] Activity detail: one primary action (the next step card keeps only its sentence on Asistencia, and its "Asignar voluntarios" replaces the tab's own button), neutral `SegmentedTabs` thumb, `ProgressBar` for capacity instead of the lone 6/10 card, band pill from `stepBadge()`
+- [x] Detail rows show a small label over a prominent value (`Row` `emphasis="value"`): Detalles, volunteer detail, Ajustes
+- [x] Activity rows in four lines instead of five: time only (the tile has the day), place, step pill with one fact (`listHint()` now returns how full it is, never both "6/10" and "faltan 4"). Tried three lines (time and place together); the place got cut too short
+- [x] Roll call: one joined Presente/Tarde/Falta control, no duplicate pill while recording, counts in the filter chips, progress bar, outlined Finalizar until everyone is recorded
+- [x] Alignment: one 20 dp gutter for band and sheet, dividers start at the text (`Section` `inset`), chips scroll to the screen edge, field labels inset like section titles
+- [x] Inicio: quiet outlined role pill, chevron on tappable `StatCard`s (`linked`), "Ver todas" as a link row
+- [x] Reportes: hours as the headline number, export as a secondary button, short range ("1–31 oct 2026"), "Ver detalle" above export
+- [x] Forms: white inputs with a 1 px border, "Ej.:" placeholders, `FieldGroup` without a card, date and time as `PickerRow`s in one card
+- [x] Empty and error states: `EmptyState` `action` (Reintentar inside) and `bare`, shorter copy
+- [x] Small fixes: counts in list section headers (loaded count, "+" while more pages exist; the API has no totals), plain participant icon buttons, no duplicate email in Ajustes, dimmed "Próximamente" rows, show/hide password
+- [x] Collapsing band: the large title folds into a compact one as the content scrolls and snaps open or folded; only on pages long enough to scroll; stays put under Reduce Motion
+- [x] Verify on the Android emulator: Inicio, Voluntarios, Actividades, activity detail (three tabs), roll call, Reportes, Ajustes, new activity form, login. Typecheck (app and server) passes; lint has the same 12 errors as `main` (setState in effect, refs during render), none new. Font scale 2 skipped at the user's call
+
 ## 5c. Start attendance manually
 
 Branch: `feature/ui-polish` (built there at the user's request, after 5b). An "Iniciar asistencia" button lets staff who may record attendance on an activity open it before the start time. `POST /api/activities/:id/attendance/start` (`attendance.record`, own activity for supervisors) stamps `attendanceStartedAt`/`attendanceStartedBy` on an open or closed activity that hasn't started, with its audit entry in the same transaction. Recording, mark all, finalize, "Por finalizar" and the reports' pending count accept either the start time passed or `attendanceStartedAt` set (`attendanceOpened()` in `server/src/activities.ts`). Check in and check out times still have to fall inside the activity's schedule.

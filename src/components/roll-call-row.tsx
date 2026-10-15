@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/icon';
@@ -51,12 +51,11 @@ export function RollCallRow({ entry, recording, busy, locked, error, onChoose, o
   return (
     <View testID={`attendance-${entry.volunteerId}`} style={styles.row}>
       {onOpen ? (
-        <Pressable testID={`attendance-${entry.volunteerId}-open`} accessibilityRole="button"
+        <PressableScale testID={`attendance-${entry.volunteerId}-open`} accessibilityRole="button"
           accessibilityLabel={`${name}. ${record ? attendanceStatusLabels[record.status] : 'Sin registrar'}. Abrir registro completo`}
-          android_ripple={{ color: Brand.surfaceMuted }} onPress={onOpen}
-          style={({ pressed }) => [styles.summary, pressed && process.env.EXPO_OS !== 'android' && styles.pressed]}>
+          android_ripple={{ color: Brand.surfaceMuted }} onPress={onOpen} style={styles.summary}>
           {summary}
-        </Pressable>
+        </PressableScale>
       ) : <View style={styles.summary}>{summary}</View>}
 
       {recording ? (
@@ -85,7 +84,6 @@ export function RollCallRow({ entry, recording, busy, locked, error, onChoose, o
 const styles = StyleSheet.create({
   row: { paddingVertical: 4 },
   summary: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 8 },
-  pressed: { backgroundColor: Brand.surfaceMuted },
   text: { flex: 1, gap: 2 },
   name: { fontFamily: AppFonts.body, fontSize: 16, color: Brand.text },
   detail: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },

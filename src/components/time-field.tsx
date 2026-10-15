@@ -1,8 +1,9 @@
 import { Host, TimePickerDialog } from '@expo/ui/jetpack-compose';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
+import { PressableScale } from '@/components/pressable-scale';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { formatTime } from '@/utils/time';
 
@@ -28,12 +29,12 @@ export function TimeField({ label, value, onChange, error, hint, start, testID }
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={`${label}: ${value ? formatTime(value) : 'sin hora'}`}
+      <PressableScale testID={testID} accessibilityRole="button" accessibilityLabel={`${label}: ${value ? formatTime(value) : 'sin hora'}`}
         accessibilityHint={error ?? hint} onPress={() => setOpen(true)}
         style={[styles.input, open && styles.focused, error ? styles.invalid : undefined]}>
         <Icon name={{ ios: 'clock', android: 'schedule' }} size={20} color={Brand.textSecondary} />
         <Text style={[styles.value, !value && styles.placeholder]}>{value ? formatTime(value) : 'Sin hora'}</Text>
-      </Pressable>
+      </PressableScale>
       {open ? (
         <Host style={styles.dialogHost}>
           <TimePickerDialog

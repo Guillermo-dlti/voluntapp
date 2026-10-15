@@ -1,8 +1,9 @@
 import { Children, Fragment, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
+import { PressableScale } from '@/components/pressable-scale';
 import { AppFonts, Brand } from '@/constants/theme';
 
 // Native-style grouped list: one rounded container per section with inset hairlines between
@@ -64,16 +65,16 @@ export function Row({ label, value, note, icon, leading, trailing, destructive, 
   );
   if (!onPress) return <View testID={testID} style={styles.row}>{content}</View>;
   return (
-    <Pressable
+    <PressableScale
       testID={testID}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
       android_ripple={{ color: Brand.surfaceMuted }}
-      style={({ pressed }) => [styles.row, pressed && process.env.EXPO_OS !== 'android' && styles.pressed, disabled && styles.disabled]}>
+      style={[styles.row, disabled && styles.disabled]}>
       {content}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -82,7 +83,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.textSecondary, paddingHorizontal: 4 },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.border, marginLeft: 16 },
   row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 12 },
-  pressed: { backgroundColor: Brand.surfaceMuted },
   disabled: { opacity: 0.6 },
   iconWell: { width: 34, height: 34, borderRadius: 10, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, gap: 2 },

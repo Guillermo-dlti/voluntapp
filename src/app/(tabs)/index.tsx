@@ -1,7 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { ActivityRow } from '@/components/activity-row';
 import { Button } from '@/components/button';
@@ -12,21 +12,22 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { StatCard } from '@/components/stat-card';
 import { roleLabels } from '@/constants/roles';
-import { AppFonts, Brand, Motion, Radius } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import type { ActivitySummary } from '@/services/activities';
 import { getDashboard, type Dashboard } from '@/services/dashboard';
+import { useMotion } from '@/utils/motion';
 import { formatHoursNumber } from '@/utils/report-range';
 import { firstName, greeting, todayLabel } from '@/utils/time';
 
 const integer = (value: number) => value.toLocaleString('es-MX');
-// The n-th block of the screen rises in a little after the one above it, on the first load only.
-const enter = (index: number) => FadeInDown.duration(Motion.enter).delay(index * Motion.stagger);
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, refresh } = useAuth();
+  // Blocks rise in one after another, on the first load only (later reloads keep them mounted).
+  const { enter } = useMotion();
   const [data, setData] = useState<Dashboard | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [message, setMessage] = useState('');

@@ -112,15 +112,29 @@ export const Elevation = {
   raised: '0px 8px 16px -4px rgba(24, 59, 36, 0.28), 0px 2px 4px 0px rgba(24, 59, 36, 0.10)',
 } as const;
 
-// Short and ease-out, like Polaris: feedback should feel immediate, not animated for show.
+// One duration and one curve for every UI animation, like Polaris: feedback should feel immediate,
+// not animated for show. Helpers that apply them (and fall back to a fade under Reduce Motion) live in
+// `src/utils/motion.ts`; screens never pick their own timings.
 export const Motion = {
-  fast: 150,
+  duration: 200,
+  // Ease-out: most of the change happens at once, then it settles.
   easeOut: [0.19, 0.91, 0.38, 1] as const,
+  // Releases (a pressed card coming back) spring instead of easing, so they feel physical. Critically
+  // damped enough to settle in about the same 200 ms without a visible wobble.
+  spring: { damping: 20, stiffness: 340, mass: 0.6 },
   pressedScale: 0.97,
-  // Content arriving on a screen: a short rise and fade, each block a little after the one above.
-  enter: 280,
-  stagger: 60,
+  // Blocks entering one after another, and digits of a rolling number.
+  stagger: 50,
+  // The only long animations: loading shimmer, the finalize celebration, the login background.
+  shimmer: 1300,
+  celebration: 1100,
+  ambient: 14000,
+  // How long a toast stays before it slides away.
+  toast: 3200,
 } as const;
+
+// The finalize celebration: BAMX leaf and forest greens, with a little mango from the logo.
+export const CelebrationColors = [Brand.primary, Brand.forest, '#6FBF73', '#A5D6A7', Brand.accent] as const;
 
 // Background/text pairs for initials avatars. Picked per name, so a person keeps their color.
 export const AvatarTones = [

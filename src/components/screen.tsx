@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
+import { PressableScale } from '@/components/pressable-scale';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 
 interface ScreenProps {
@@ -39,10 +40,10 @@ export function Screen({ testID, title, titleTestID, onBack, eyebrow, subtitle, 
     <View testID={testID} style={styles.root}>
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.band}>
         {onBack ? (
-          <Pressable testID={`${testID}-back`} accessibilityRole="button" accessibilityLabel="Regresar" hitSlop={8} onPress={onBack}
-            style={({ pressed }) => [styles.back, pressed && styles.backPressed]}>
+          <PressableScale testID={`${testID}-back`} accessibilityRole="button" accessibilityLabel="Regresar" hitSlop={8} onPress={onBack}
+            android_ripple={{ color: Brand.forestPressed, borderless: true }} style={styles.back}>
             <Icon name={{ ios: 'chevron.left', android: 'arrow_back' }} size={22} color={Brand.forestText} />
-          </Pressable>
+          </PressableScale>
         ) : null}
         <View style={styles.titleRow}>
           <View style={styles.titleText}>
@@ -76,7 +77,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.forest },
   band: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, gap: 6 },
   back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginLeft: -8, marginBottom: 4 },
-  backPressed: { backgroundColor: Brand.forestPressed },
   titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   titleText: { flex: 1, gap: 4 },
   eyebrow: { fontFamily: AppFonts.bodySemiBold, fontSize: 15, color: Brand.forestMuted },

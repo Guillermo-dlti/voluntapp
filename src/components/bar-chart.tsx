@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { PressableScale } from '@/components/pressable-scale';
 
 import { badgeColors, type BadgeTone } from '@/components/status-badge';
 import { AppFonts, Brand } from '@/constants/theme';
@@ -35,12 +37,11 @@ export function HorizontalBars({ items, testID }: { items: BarItem[]; testID?: s
           </>
         );
         return item.onPress ? (
-          <Pressable key={item.key} testID={item.testID} accessibilityRole="button"
+          <PressableScale key={item.key} testID={item.testID} accessibilityRole="button"
             accessibilityLabel={`${item.label}, ${item.valueLabel}`} onPress={item.onPress}
-            android_ripple={{ color: Brand.surfaceMuted }}
-            style={({ pressed }) => [styles.barRow, pressed && process.env.EXPO_OS !== 'android' && styles.pressed]}>
+            android_ripple={{ color: Brand.surfaceMuted }} style={styles.barRow}>
             {content}
-          </Pressable>
+          </PressableScale>
         ) : <View key={item.key} testID={item.testID} style={styles.barRow}>{content}</View>;
       })}
     </View>
@@ -84,7 +85,6 @@ export function StackedBar({ segments, testID }: { segments: StackSegment[]; tes
 const styles = StyleSheet.create({
   bars: { gap: 2 },
   barRow: { minHeight: 48, justifyContent: 'center', gap: 6, paddingVertical: 6, borderRadius: 8 },
-  pressed: { backgroundColor: Brand.surfaceMuted },
   barHead: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
   barLabel: { flex: 1, fontFamily: AppFonts.body, fontSize: 15, color: Brand.text },
   barValue: { fontFamily: AppFonts.headingSemiBold, fontSize: 15, color: Brand.text },

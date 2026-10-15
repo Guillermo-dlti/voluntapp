@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
+import { PressableScale } from '@/components/pressable-scale';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { formatDate } from '@/utils/time';
 
@@ -29,7 +30,7 @@ export function DateField({ label, value, onChange, error, hint, min, max, start
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={`${label}: ${value ? formatDate(value) : 'sin fecha'}`}
+      <PressableScale testID={testID} accessibilityRole="button" accessibilityLabel={`${label}: ${value ? formatDate(value) : 'sin fecha'}`}
         accessibilityHint={error ?? hint} onPress={() => setOpen(true)}
         style={[styles.input, open && styles.focused, error ? styles.invalid : undefined]}>
         <Icon name={{ ios: 'calendar', android: 'calendar_month' }} size={20} color={Brand.textSecondary} />
@@ -39,7 +40,7 @@ export function DateField({ label, value, onChange, error, hint, min, max, start
             <Icon name={{ ios: 'xmark.circle.fill', android: 'cancel' }} size={20} color={Brand.textTertiary} />
           </Pressable>
         ) : null}
-      </Pressable>
+      </PressableScale>
       {open ? (
         <Host style={styles.dialogHost}>
           <DatePickerDialog

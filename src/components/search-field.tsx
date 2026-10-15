@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Type } from '@/constants/theme';
 
 interface SearchFieldProps {
   value: string;
@@ -40,5 +40,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Brand.border,
   },
-  input: { flex: 1, fontFamily: AppFonts.body, fontSize: 16, color: Brand.text, paddingVertical: 10 },
+  input: { flex: 1, fontFamily: Type.body.fontFamily, fontSize: Type.body.fontSize, color: Brand.text, paddingVertical: 10 },
 });

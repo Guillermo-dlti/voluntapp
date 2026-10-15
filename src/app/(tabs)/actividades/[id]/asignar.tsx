@@ -4,14 +4,15 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { Row, Section } from '@/components/grouped-list';
 import { Screen } from '@/components/screen';
 import { SearchField } from '@/components/search-field';
 import { StatusBadge } from '@/components/status-badge';
-import { AppFonts, Brand } from '@/constants/theme';
+import { SkeletonList } from '@/components/skeleton';
+import { Brand, Radius, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { assignVolunteer, getActivity, type ActivityDetail } from '@/services/activities';
 import { listVolunteers, type VolunteerSummary } from '@/services/volunteers';
@@ -21,6 +22,7 @@ import { formatPhone } from '@/utils/volunteer-rules';
 // a refusal (full, busy at that time) stays here with the API's plain sentence.
 export default function AssignVolunteerScreen() {
   const router = useRouter();
+  const feedback = useFeedback();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { refresh } = useAuth();
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
@@ -76,6 +78,7 @@ export default function AssignVolunteerScreen() {
     setMessage('');
     try {
       await assignVolunteer(id, volunteer.id);
+      feedback.toast(`Se asignó a ${volunteer.firstName} ${volunteer.lastName}.`);
       router.back();
     } catch (cause: unknown) {
       if (signOutOn401(cause)) return;
@@ -93,7 +96,7 @@ export default function AssignVolunteerScreen() {
       onEndReached={() => { if (hasMore && !loadingMore && state === 'ready') void load(page + 1); }}>
       {message ? <View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{message}</Text></View> : null}
       {state === 'loading' ? (
-        <Card><View style={styles.loading}><ActivityIndicator color={Brand.primary} /><Text style={styles.muted}>Cargando voluntarios…</Text></View></Card>
+        <SkeletonList variant="person" rows={6} title label="Cargando voluntarios…" />
       ) : state === 'error' ? (
         <Button label="Reintentar" variant="secondary" onPress={() => { setState('loading'); void load(1); }} />
       ) : items.length === 0 ? (
@@ -122,8 +125,6 @@ export default function AssignVolunteerScreen() {
 }
 
 const styles = StyleSheet.create({
-  loading: { alignItems: 'center', gap: 12, paddingVertical: 24 },
-  muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
-  alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
+  alertText: { ...Type.callout, color: Brand.dangerText },
 });

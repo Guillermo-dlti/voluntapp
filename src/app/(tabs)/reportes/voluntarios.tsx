@@ -4,13 +4,13 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { ExportActions } from '@/components/export-actions';
 import { Row, Section } from '@/components/grouped-list';
 import { Screen } from '@/components/screen';
 import { StatusBadge } from '@/components/status-badge';
-import { AppFonts, Brand } from '@/constants/theme';
+import { SkeletonList } from '@/components/skeleton';
+import { Brand, Type } from '@/constants/theme';
 import { useReportList } from '@/hooks/use-report-list';
 import { listVolunteerHours, type VolunteerHoursRow } from '@/services/reports';
 import { formatHours, plural, rangeErrors, rangeLabel } from '@/utils/report-range';
@@ -40,7 +40,7 @@ export default function VolunteerHoursScreen() {
       onRefresh={list.pullToRefresh}
       onEndReached={list.loadMore}>
       {list.state === 'loading' ? (
-        <Card><View style={styles.loading}><ActivityIndicator color={Brand.primary} /><Text style={styles.muted}>Cargando voluntarios…</Text></View></Card>
+        <SkeletonList variant="person" rows={6} label="Cargando voluntarios…" />
       ) : list.state === 'error' ? (
         <View style={styles.errorBlock}>
           <EmptyState icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar la lista" body={list.message} />
@@ -74,7 +74,6 @@ export default function VolunteerHoursScreen() {
 }
 
 const styles = StyleSheet.create({
-  loading: { alignItems: 'center', gap: 12, paddingVertical: 24 },
-  muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
+  muted: { ...Type.callout, color: Brand.textSecondary, textAlign: 'center' },
   errorBlock: { gap: 16 },
 });

@@ -3,11 +3,13 @@ import { useRouter } from 'expo-router';
 import { Screen } from '@/components/screen';
 import { VolunteerForm } from '@/components/volunteer-form';
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { createVolunteer } from '@/services/volunteers';
 import { draftToPayload, emptyDraft } from '@/utils/volunteer-rules';
 
 export default function NewVolunteerScreen() {
   const router = useRouter();
+  const feedback = useFeedback();
   const { refresh } = useAuth();
   return (
     <Screen testID="volunteer-new-screen" title="Nuevo voluntario" subtitle="Los campos sin “opcional” son obligatorios."
@@ -16,6 +18,7 @@ export default function NewVolunteerScreen() {
         onSessionEnded={() => void refresh()}
         onSubmit={async (draft) => {
           const volunteer = await createVolunteer(draftToPayload(draft));
+          feedback.toast('Voluntario registrado.');
           // Replace the form, so "back" from the new record returns to the list, not to a filled form.
           router.replace({ pathname: '/voluntarios/[id]', params: { id: volunteer.id } });
         }} />

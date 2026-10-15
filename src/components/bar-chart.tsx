@@ -1,7 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { PressableScale } from '@/components/pressable-scale';
+import { useLargeText } from '@/hooks/use-large-text';
 
 import { badgeColors, type BadgeTone } from '@/components/status-badge';
-import { AppFonts, Brand } from '@/constants/theme';
+import { Brand, Type } from '@/constants/theme';
 
 // Plain views with percent widths: two simple charts don't justify a chart library and a native module.
 
@@ -20,13 +23,15 @@ export interface BarItem {
 // One horizontal bar per item, scaled to the largest value. Items come already sorted.
 export function HorizontalBars({ items, testID }: { items: BarItem[]; testID?: string }) {
   const max = Math.max(...items.map((item) => item.value), 0);
+  // Full names at large text sizes, however many lines they take.
+  const largeText = useLargeText();
   return (
     <View testID={testID} style={styles.bars}>
       {items.map((item) => {
         const content = (
           <>
             <View style={styles.barHead}>
-              <Text style={styles.barLabel} numberOfLines={1}>{item.label}</Text>
+              <Text style={styles.barLabel} numberOfLines={largeText ? undefined : 1}>{item.label}</Text>
               <Text style={styles.barValue}>{item.valueLabel}</Text>
             </View>
             <View style={styles.track}>
@@ -35,12 +40,11 @@ export function HorizontalBars({ items, testID }: { items: BarItem[]; testID?: s
           </>
         );
         return item.onPress ? (
-          <Pressable key={item.key} testID={item.testID} accessibilityRole="button"
+          <PressableScale key={item.key} testID={item.testID} accessibilityRole="button"
             accessibilityLabel={`${item.label}, ${item.valueLabel}`} onPress={item.onPress}
-            android_ripple={{ color: Brand.surfaceMuted }}
-            style={({ pressed }) => [styles.barRow, pressed && process.env.EXPO_OS !== 'android' && styles.pressed]}>
+            android_ripple={{ color: Brand.surfaceMuted }} style={styles.barRow}>
             {content}
-          </Pressable>
+          </PressableScale>
         ) : <View key={item.key} testID={item.testID} style={styles.barRow}>{content}</View>;
       })}
     </View>
@@ -84,18 +88,17 @@ export function StackedBar({ segments, testID }: { segments: StackSegment[]; tes
 const styles = StyleSheet.create({
   bars: { gap: 2 },
   barRow: { minHeight: 48, justifyContent: 'center', gap: 6, paddingVertical: 6, borderRadius: 8 },
-  pressed: { backgroundColor: Brand.surfaceMuted },
   barHead: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
-  barLabel: { flex: 1, fontFamily: AppFonts.body, fontSize: 15, color: Brand.text },
-  barValue: { fontFamily: AppFonts.headingSemiBold, fontSize: 15, color: Brand.text },
-  track: { height: 8, borderRadius: 4, backgroundColor: Brand.surfaceMuted, overflow: 'hidden' },
-  fill: { height: 8, minWidth: MIN_BAR, borderRadius: 4, backgroundColor: Brand.primary },
+  barLabel: { flex: 1, ...Type.body, color: Brand.text },
+  barValue: { ...Type.bodyStrong, color: Brand.text },
+  track: { height: 6, borderRadius: 3, backgroundColor: Brand.surfaceMuted, overflow: 'hidden' },
+  fill: { height: 6, minWidth: MIN_BAR, borderRadius: 3, backgroundColor: Brand.primary },
   stack: { gap: 12 },
-  stackTrack: { flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden', backgroundColor: Brand.surfaceMuted },
+  stackTrack: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: Brand.surfaceMuted },
   // A thin line of the card color between segments, inside the width so the bar still adds up to 100 %.
   divider: { borderLeftWidth: 2, borderLeftColor: Brand.surface },
   legend: { gap: 6 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },
+  legendText: { ...Type.callout, color: Brand.textSecondary },
 });

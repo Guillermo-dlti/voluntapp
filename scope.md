@@ -35,7 +35,7 @@ The one path the MVP has to walk end to end:
 | 3 | Activities & assignments | done (spec 0004) |
 | 4 | Attendance & hours | done (spec 0005) |
 | 5a | Activity, attendance and reports UX rework | in-progress (spec 0007) |
-| 5 | Dashboard | not started (after 5a; spec 0008) |
+| 5 | Dashboard | in-progress (spec 0008) |
 | 6 | Reports + CSV export | done (spec 0006) |
 | 7 | Staff management + audit log viewer | not started |
 | 8 | Hardening | not started |
@@ -171,9 +171,56 @@ Spec: [`docs/specs/0007-activity-attendance-reports-ux/index.md`](docs/specs/000
 
 ## 5. Dashboard
 
-- [ ] KPIs (active volunteers, activities this month, hours this month; exact list confirmed when this feature starts)
-- [ ] Upcoming activities
-- [ ] Activities pending attendance finalization
+Spec: [`docs/specs/0008-dashboard/index.md`](docs/specs/0008-dashboard/index.md) (decisions approved 2026-10-14, cross checked). Branch: `feature/dashboard`. Admin and coordinator see three KPIs for the Guadalajara calendar month (horas, voluntarios activos, actividades), the next 3 activities and up to 5 por finalizar (Reportes dropped its stat cards for a totals line; Apple Health style KPI cards and date tiles, AC-12). Supervisors see only activities they supervise, with "Hoy" and "Por finalizar" counts and no KPIs. Code in `server/src/dashboard.ts`, `server/src/activities.ts` (`activityListFilter`, `toActivitySummary`), `server/src/reports.ts` (`currentMonthRange`), `src/app/(tabs)/index.tsx`, `src/services/dashboard.ts`, `src/components/activity-row.tsx`, `src/components/toggle-chip.tsx`.
+
+- [x] Design it (spec)
+- [x] Build it: `/develop` dashboard
+  - [x] Server: `dashboard.view` capability, shared `activityListFilter`/`toActivitySummary` and `currentMonthRange`, `GET /api/dashboard` (AC-2, AC-6, AC-7, AC-11)
+  - [x] Inicio for admin and coordinator: KPI cards, Próximas actividades, Por finalizar (AC-1, AC-2, AC-4, AC-5)
+  - [x] Links with explicit route params into Actividades, Voluntarios and Reportes (AC-3)
+  - [x] Supervisor layout, `mine=true` on the activities list and the "Solo mis actividades" chip (AC-6, AC-8)
+  - [x] Focus reload, pull to refresh, loading, error and stale states (AC-9, AC-10)
+- [ ] Verify it: `/check verify` dashboard on the Android emulator as coordinator, supervisor and admin, plus API checks against Atlas
+
+## 5b. UI polish
+
+Branch: `feature/ui-polish`. UI only: no API, auth or schema change, no new dependency (Reanimated 4 does all of it; Skia was left out because it costs ~3 MB of CanvasKit on web for one optional background). Keeps the layout, colors and screens; makes the app feel intentional through one set of motion tokens, skeletons, and fit and finish. Verified on the Android emulator and on Expo web.
+
+- [x] Motion foundation: one duration, curve and spring in `Motion` (`theme.ts`), `src/utils/motion.ts` helpers that fall back to a plain fade under Reduce Motion, `PressableScale` springs back and every tappable row uses it
+- [x] `Skeleton` with shimmer and shaped placeholders replacing every loading spinner card (Inicio, Voluntarios, Actividades, details, Reportes, forms)
+- [x] `RollingNumber` digit by digit in `StatCard`
+- [x] Confetti burst in BAMX greens when attendance is finalized, nowhere else
+- [x] Toasts that slide in for saved / finalized / status changes (`FeedbackProvider`)
+- [x] Splash in forest with the BAMX logo, held until fonts load, no Expo overlay (needs a rebuild: `npm run android`)
+- [x] Large text (font scale 2) pass on every main screen; magic numbers on touched screens moved to tokens
+- [x] Login ambient background, paused under Reduce Motion and in the background
+- [x] Verify on the Android emulator: normal and font scale 2, animations removed (Reduce Motion), skeletons and rolling digits (slowed down to capture), toast and confetti (temporarily hooked to pull to refresh; finalizing would have changed Atlas data), splash after a rebuild
+- [ ] Verify on web: blocked. `localhost:8081` answers 500 (`addCustomSourceTransformer` of undefined in static rendering), already the case on `main`; `expo install --check` lists outdated Expo packages (`expo-router` 57.0.17, expected ~57.0.27), the likely cause
+- [ ] Known limit: the NativeTabs bar labels truncate at font scale 2 (native Android tab bar, not styleable from React)
+
+Design review against Mobbin references (Shopify, Apple Health, Luma, Flighty, WhatsApp, Teams), approved and built in groups. Before and after screenshots are on the review page.
+
+- [x] Tokens: `Type` scale and `Spacing` (with `gutter`) in `theme.ts`, every screen and shared component on them; unused Expo template files removed (`themed-*`, `use-theme`, `use-color-scheme`, `ui/collapsible`, `web-badge`, `external-link`, `hint-row`)
+- [x] Activity detail: one primary action (the next step card keeps only its sentence on Asistencia, and its "Asignar voluntarios" replaces the tab's own button), neutral `SegmentedTabs` thumb, `ProgressBar` for capacity instead of the lone 6/10 card, band pill from `stepBadge()`
+- [x] Detail rows show a small label over a prominent value (`Row` `emphasis="value"`): Detalles, volunteer detail, Ajustes
+- [x] Activity rows in four lines instead of five: time only (the tile has the day), place, step pill with one fact (`listHint()` now returns how full it is, never both "6/10" and "faltan 4"). Tried three lines (time and place together); the place got cut too short
+- [x] Roll call: one joined Presente/Tarde/Falta control, no duplicate pill while recording, counts in the filter chips, progress bar, outlined Finalizar until everyone is recorded
+- [x] Alignment: one 20 dp gutter for band and sheet, dividers start at the text (`Section` `inset`), chips scroll to the screen edge, field labels inset like section titles
+- [x] Inicio: quiet outlined role pill, chevron on tappable `StatCard`s (`linked`), "Ver todas" as a link row
+- [x] Reportes: hours as the headline number, export as a secondary button, short range ("1–31 oct 2026"), "Ver detalle" above export
+- [x] Forms: white inputs with a 1 px border, "Ej.:" placeholders, `FieldGroup` without a card, date and time as `PickerRow`s in one card
+- [x] Empty and error states: `EmptyState` `action` (Reintentar inside) and `bare`, shorter copy
+- [x] Small fixes: counts in list section headers (loaded count, "+" while more pages exist; the API has no totals), plain participant icon buttons, no duplicate email in Ajustes, dimmed "Próximamente" rows, show/hide password
+- [x] Collapsing band: the large title folds into a compact one as the content scrolls and snaps open or folded; only on pages long enough to scroll; stays put under Reduce Motion
+- [x] Verify on the Android emulator: Inicio, Voluntarios, Actividades, activity detail (three tabs), roll call, Reportes, Ajustes, new activity form, login. Typecheck (app and server) passes; lint has the same 12 errors as `main` (setState in effect, refs during render), none new. Font scale 2 skipped at the user's call
+
+## 5c. Start attendance manually
+
+Branch: `feature/ui-polish` (built there at the user's request, after 5b). An "Iniciar asistencia" button lets staff who may record attendance on an activity open it before the start time. `POST /api/activities/:id/attendance/start` (`attendance.record`, own activity for supervisors) stamps `attendanceStartedAt`/`attendanceStartedBy` on an open or closed activity that hasn't started, with its audit entry in the same transaction. Recording, mark all, finalize, "Por finalizar" and the reports' pending count accept either the start time passed or `attendanceStartedAt` set (`attendanceOpened()` in `server/src/activities.ts`). Check in and check out times still have to fall inside the activity's schedule.
+
+- [x] Server: fields and validator, `attendanceOpened()`, start endpoint with refusal messages, summary and detail expose `attendanceStartedAt`
+- [x] App: `activityStep()` treats a started activity as Asistencia; next step card offers "Iniciar asistencia" when assigning isn't the next thing; the Asistencia tab offers it always (with a confirmation), then switches to the roll call with a toast
+- [x] Verify: button and copy on the Android emulator; API refusals checked (401 no session, 404 bad id, 409 already open, 403 another supervisor's activity). Not run: an actual start, which would stamp a shared demo activity in Atlas for good
 
 ## 6. Reports + CSV export
 

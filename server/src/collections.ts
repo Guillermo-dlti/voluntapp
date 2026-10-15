@@ -53,6 +53,10 @@ export interface Activity {
   requirements?: string;
   status: 'draft' | 'open' | 'closed' | 'cancelled';
   supervisorId?: ObjectId;
+  // Set when staff open attendance before the start time ("Iniciar asistencia"); from then on it can be
+  // taken as if the activity had started.
+  attendanceStartedAt?: Date;
+  attendanceStartedBy?: ObjectId;
   // Set once when attendance is finalized; the activity is closed from then on.
   attendanceFinalizedAt?: Date;
   attendanceFinalizedBy?: ObjectId;
@@ -197,6 +201,8 @@ const definitions: CollectionDefinition[] = [
           requirements: text(1000, 0),
           status: { enum: ['draft', 'open', 'closed', 'cancelled'] },
           supervisorId: objectId,
+          attendanceStartedAt: date,
+          attendanceStartedBy: objectId,
           attendanceFinalizedAt: date,
           attendanceFinalizedBy: objectId,
           attendanceLock: objectId,

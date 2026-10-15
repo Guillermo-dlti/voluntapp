@@ -1,19 +1,22 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ActivityForm } from '@/components/activity-form';
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
-import { Brand } from '@/constants/theme';
+import { SkeletonForm } from '@/components/skeleton';
+
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { getActivity, updateActivity, type Activity } from '@/services/activities';
 import { activityPayload, draftFromActivity } from '@/utils/activity-rules';
 
 export default function EditActivityScreen() {
   const router = useRouter();
+  const feedback = useFeedback();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { refresh } = useAuth();
   const [activity, setActivity] = useState<Activity | null>(null);
@@ -37,7 +40,7 @@ export default function EditActivityScreen() {
       {activity && editable ? (
         <ActivityForm initial={draftFromActivity(activity)} submitLabel="Guardar cambios" busyLabel="Guardando…"
           onSessionEnded={() => void refresh()}
-          onSubmit={async (draft) => { await updateActivity(activity.id, activityPayload(draft)); router.back(); }} />
+          onSubmit={async (draft) => { await updateActivity(activity.id, activityPayload(draft)); feedback.toast('Cambios guardados.'); router.back(); }} />
       ) : activity ? (
         <EmptyState icon={{ ios: 'lock', android: 'lock' }} title="Ya no se puede editar"
           body="Solo se editan actividades en borrador o publicadas. Esta ya está cerrada o cancelada." />
@@ -46,7 +49,7 @@ export default function EditActivityScreen() {
           <EmptyState icon={{ ios: 'exclamationmark.triangle', android: 'error' }} title="No pudimos abrir la actividad" body={message} />
           <Button label="Reintentar" variant="secondary" onPress={() => void load()} />
         </View>
-      ) : <ActivityIndicator color={Brand.primary} />}
+      ) : <SkeletonForm />}
     </Screen>
   );
 }

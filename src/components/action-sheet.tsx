@@ -1,10 +1,12 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { SlideInDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Icon } from '@/components/icon';
-import { AppFonts, Brand, Elevation, Radius } from '@/constants/theme';
+import { PressableScale } from '@/components/pressable-scale';
+import { Brand, Elevation, Radius, Type } from '@/constants/theme';
+import { useMotion } from '@/utils/motion';
 
 export interface SheetAction {
   label: string;
@@ -32,11 +34,12 @@ interface ActionSheetProps {
 // activity menu can need four plus "Volver".
 export function ActionSheet({ visible, title, subtitle, actions, onClose, testID }: ActionSheetProps) {
   const insets = useSafeAreaInsets();
+  const motion = useMotion();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <View style={styles.backdrop}>
         <Pressable accessibilityLabel="Cerrar menú" style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View testID={testID} entering={SlideInDown.duration(220)}
+        <Animated.View testID={testID} entering={motion.sheetIn()}
           style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
           <View style={styles.handle} />
           <View style={styles.heading}>
@@ -47,10 +50,10 @@ export function ActionSheet({ visible, title, subtitle, actions, onClose, testID
             {actions.map((action, index) => (
               <View key={action.label}>
                 {index > 0 ? <View style={styles.hairline} /> : null}
-                <Pressable testID={action.testID} accessibilityRole="button" android_ripple={{ color: Brand.surfaceMuted }}
+                <PressableScale testID={action.testID} accessibilityRole="button" android_ripple={{ color: Brand.surfaceMuted }}
                   accessibilityState={{ disabled: !!action.disabled }} disabled={action.disabled}
                   onPress={() => { onClose(); action.onPress(); }}
-                  style={({ pressed }) => [styles.row, pressed && process.env.EXPO_OS !== 'android' && styles.pressed, action.disabled && styles.disabled]}>
+                  style={[styles.row, action.disabled && styles.disabled]}>
                   <View style={[styles.iconWell, action.critical && styles.iconWellCritical]}>
                     <Icon name={action.icon} size={18} color={action.critical ? Brand.danger : Brand.primary} />
                   </View>
@@ -58,7 +61,7 @@ export function ActionSheet({ visible, title, subtitle, actions, onClose, testID
                     <Text style={[styles.label, action.critical && styles.labelCritical]}>{action.label}</Text>
                     {action.detail ? <Text style={styles.detail}>{action.detail}</Text> : null}
                   </View>
-                </Pressable>
+                </PressableScale>
               </View>
             ))}
           </View>
@@ -82,17 +85,16 @@ const styles = StyleSheet.create({
   },
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: Brand.border },
   heading: { gap: 4, paddingHorizontal: 4 },
-  title: { fontFamily: AppFonts.heading, fontSize: 20, color: Brand.text },
-  subtitle: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },
+  title: { ...Type.headline, color: Brand.text },
+  subtitle: { ...Type.callout, color: Brand.textSecondary },
   list: { borderRadius: Radius.card, borderWidth: 1, borderColor: Brand.border, overflow: 'hidden' },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.border, marginLeft: 64 },
   row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10 },
-  pressed: { backgroundColor: Brand.surfaceMuted },
-  iconWell: { width: 34, height: 34, borderRadius: 10, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  iconWell: { width: 34, height: 34, borderRadius: Radius.well, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
   iconWellCritical: { backgroundColor: Brand.dangerLight },
   disabled: { opacity: 0.5 },
   text: { flex: 1, gap: 2 },
-  detail: { fontFamily: AppFonts.body, fontSize: 13, lineHeight: 18, color: Brand.textSecondary },
-  label: { fontFamily: AppFonts.body, fontSize: 16, color: Brand.text },
+  detail: { ...Type.footnote, color: Brand.textSecondary },
+  label: { ...Type.body, color: Brand.text },
   labelCritical: { color: Brand.danger },
 });

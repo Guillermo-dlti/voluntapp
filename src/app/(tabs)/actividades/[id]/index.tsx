@@ -1,9 +1,9 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/action-sheet';
-import { ActivityStatusBadge } from '@/components/activity-status';
+import { ActivityStepBadge } from '@/components/activity-status';
 import { NextStepCard, ProgressStrip } from '@/components/activity-progress';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
@@ -12,16 +12,18 @@ import { FilterChips } from '@/components/filter-chips';
 import { Row, Section } from '@/components/grouped-list';
 import { IconButton } from '@/components/icon-button';
 import { ReasonDialog } from '@/components/reason-dialog';
+import { ProgressBar } from '@/components/progress-bar';
 import { RollCallRow } from '@/components/roll-call-row';
 import { Screen } from '@/components/screen';
 import { SegmentedTabs } from '@/components/segmented-tabs';
-import { StatCard } from '@/components/stat-card';
+import { SkeletonActivityDetail } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import {
-  cancelAssignment, finalizeAttendance, getActivity, markAllPresent, missingPeople, recordAttendance, setActivityStatus,
+  cancelAssignment, finalizeAttendance, getActivity, markAllPresent, missingPeople, recordAttendance, setActivityStatus, startAttendance,
   type ActivityDetail, type ActivityStatus, type AttendanceStatus, type MissingPerson, type Participant,
 } from '@/services/activities';
 import {
@@ -37,18 +39,25 @@ const tabOptions = [
   { value: 'asistencia', label: 'Asistencia' },
 ] as const;
 
-const rollFilterOptions = [
-  { value: 'all', label: 'Todos' },
-  { value: 'unrecorded', label: 'Sin registrar' },
-] as const;
+type Busy = ActivityStatus | 'start' | 'mark-all' | 'finalize' | null;
 
-type Busy = ActivityStatus | 'mark-all' | 'finalize' | null;
+const statusToasts: Record<ActivityStatus, string> = {
+  open: 'Actividad publicada.',
+  closed: 'Inscripciones cerradas.',
+  cancelled: 'Actividad cancelada.',
+  draft: 'La actividad volvió a borrador.',
+};
+
+// A start time inside a sentence: the formatted time already ends in "a.m."/"p.m.", so the sentence's
+// own period would double it.
+const startsText = (iso: string) => formatDateTime(iso).replace(/\.$/, '');
 
 export default function ActivityDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; tab?: string }>();
   const id = params.id;
   const { user, refresh } = useAuth();
+  const feedback = useFeedback();
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState<Busy>(null);
@@ -89,11 +98,36 @@ export default function ActivityDetailScreen() {
       const activity = await setActivityStatus(detail.activity.id, next);
       setDetail((current) => (current ? { ...current, activity } : current));
       setMessage('');
+      feedback.toast(statusToasts[next]);
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
       setMessage(apiMessage(cause, 'No pudimos cambiar el estado. Inténtalo de nuevo.'));
       void load();
     } finally { pending.current = false; setBusy(null); }
+  }
+
+  async function startEarly() {
+    if (pending.current || !detail) return;
+    pending.current = true;
+    setBusy('start');
+    setMessage('');
+    try {
+      const activity = await startAttendance(detail.activity.id);
+      setDetail((current) => (current ? { ...current, activity } : current));
+      setTab('asistencia');
+      feedback.toast('Asistencia iniciada. Ya puedes marcar quién llegó.');
+    } catch (cause: unknown) {
+      if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
+      setMessage(apiMessage(cause, 'No pudimos iniciar la asistencia. Inténtalo de nuevo.'));
+      void load();
+    } finally { pending.current = false; setBusy(null); }
+  }
+
+  function confirmStart() {
+    if (!detail) return;
+    Alert.alert('¿Iniciar la asistencia ahora?',
+      `La actividad empieza el ${startsText(detail.activity.startsAt)}. Podrás marcar quién llegó desde ya. Las horas de entrada y salida siguen siendo las del horario de la actividad.`,
+      [{ text: 'Volver', style: 'cancel' }, { text: 'Iniciar', onPress: () => void startEarly() }]);
   }
 
   async function markAll() {
@@ -105,6 +139,7 @@ export default function ActivityDetailScreen() {
     try {
       await markAllPresent(detail.activity.id);
       await load();
+      feedback.toast('Quedaron todos como presentes.');
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
       setAttendanceMessage(apiMessage(cause, 'No pudimos marcar la asistencia. Inténtalo de nuevo.'));
@@ -120,6 +155,9 @@ export default function ActivityDetailScreen() {
     try {
       await finalizeAttendance(detail.activity.id);
       await load();
+      // The one celebration in the app: this is the moment the hours become official.
+      feedback.celebrate();
+      feedback.toast('Asistencia finalizada. Las horas ya cuentan.');
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
       setAttendanceMessage(apiMessage(cause, 'No pudimos finalizar la asistencia. Inténtalo de nuevo.'));
@@ -172,6 +210,7 @@ export default function ActivityDetailScreen() {
       await cancelAssignment(detail.activity.id, cancelling.assignmentId, reason);
       setCancelling(null);
       await load();
+      feedback.toast('Asignación cancelada.');
       return null;
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { setCancelling(null); void refresh(); return null; }
@@ -185,11 +224,9 @@ export default function ActivityDetailScreen() {
     return (
       <Screen testID="activity-detail-screen" title="Actividad" onBack={() => router.back()}>
         {message ? (
-          <View style={styles.block}>
-            <EmptyState icon={{ ios: 'exclamationmark.triangle', android: 'error' }} title="No pudimos abrir la actividad" body={message} />
-            <Button label="Reintentar" variant="secondary" onPress={() => void load()} />
-          </View>
-        ) : <ActivityIndicator color={Brand.primary} />}
+          <EmptyState icon={{ ios: 'exclamationmark.triangle', android: 'error' }} title="No pudimos abrir la actividad" body={message}
+            action={{ label: 'Reintentar', onPress: () => void load() }} />
+        ) : <SkeletonActivityDetail />}
       </Screen>
     );
   }
@@ -208,7 +245,14 @@ export default function ActivityDetailScreen() {
   // Recording also needs the activity to have started; before that the API refuses it.
   const canRecord = step === 'attendance' && canRecordOn(detail, viewer);
   const canCorrect = finalized && roleCan.correctAttendance(user.role);
+  // Before the start time, the same people can open attendance early ("Iniciar asistencia").
+  const canStart = step === 'published' && canRecordOn(detail, viewer) && assigned.length > 0;
   const showFinalizeBar = currentTab === 'asistencia' && canRecord && assigned.length > 0;
+  // One primary action on screen: on Asistencia the tab itself offers start, record and finalize, so
+  // the card keeps only its sentence; and the card's "Asignar voluntarios" replaces the tab's own button.
+  const attendanceAction = next.action && ['start-attendance', 'take-attendance', 'finalize'].includes(next.action.kind);
+  const cardNext = currentTab === 'asistencia' && attendanceAction ? { text: next.text } : next;
+  const cardAssigns = next.action?.kind === 'assign';
 
   const menuActions: SheetAction[] = [];
   if (canEdit && (activity.status === 'draft' || activity.status === 'open')) {
@@ -240,6 +284,7 @@ export default function ActivityDetailScreen() {
   function runNext(kind: NextAction) {
     if (kind === 'publish') void changeStatus('open');
     else if (kind === 'assign') router.push({ pathname: '/actividades/[id]/asignar', params: { id: activity.id } });
+    else if (kind === 'start-attendance') confirmStart();
     else if (kind === 'take-attendance') setTab('asistencia');
     else confirmFinalize();
   }
@@ -255,19 +300,24 @@ export default function ActivityDetailScreen() {
         <IconButton testID="activity-menu" icon={{ ios: 'ellipsis', android: 'more_horiz' }} accessibilityLabel="Más acciones"
           onDark disabled={busy !== null} onPress={() => setMenuOpen(true)} />
       ) : undefined}
-      band={<ActivityStatusBadge status={activity.status} />}
+      band={<ActivityStepBadge activity={activity} />}
       footer={showFinalizeBar ? (
         <>
+          {/* Until everyone is recorded the button waits as a quiet outline, not a washed-out green. */}
           <Button testID="attendance-finalize" label="Finalizar asistencia" busyLabel="Finalizando…" busy={busy === 'finalize'}
+            variant={unrecorded > 0 ? 'secondary' : 'primary'}
             disabled={unrecorded > 0 || busy === 'mark-all'} icon={{ ios: 'lock', android: 'lock' }} onPress={confirmFinalize} />
           {unrecorded > 0 ? (
-            <Text testID="attendance-finalize-hint" style={styles.barHint}>Registra a todos para finalizar (faltan {unrecorded})</Text>
+            <Text testID="attendance-finalize-hint" style={styles.barHint}>
+              {unrecorded === 1 ? 'Falta registrar a 1 persona para finalizar.' : `Falta registrar a ${unrecorded} personas para finalizar.`}
+            </Text>
           ) : null}
         </>
       ) : undefined}>
 
       {step === 'cancelled' ? null : <ProgressStrip step={step} />}
-      <NextStepCard step={step} next={next} busy={busy === 'open'} busyLabel="Publicando…"
+      <NextStepCard step={step} next={cardNext} busy={busy === 'open' || busy === 'start'}
+        busyLabel={busy === 'start' ? 'Iniciando…' : 'Publicando…'}
         onAction={() => { if (next.action) runNext(next.action.kind); }} />
 
       {message ? <View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{message}</Text></View> : null}
@@ -295,13 +345,13 @@ export default function ActivityDetailScreen() {
 
   function detailsTab() {
     return (
-      <Section>
-        <Row icon={{ ios: 'calendar', android: 'event' }} label="Horario" value={formatSchedule(activity.startsAt, activity.endsAt)} />
-        <Row icon={{ ios: 'mappin.and.ellipse', android: 'location_on' }} label="Lugar" value={activity.location} />
-        <Row icon={{ ios: 'person.badge.shield.checkmark', android: 'supervisor_account' }} label="Supervisión"
+      <Section inset="icon">
+        <Row emphasis="value" icon={{ ios: 'calendar', android: 'event' }} label="Horario" value={formatSchedule(activity.startsAt, activity.endsAt)} />
+        <Row emphasis="value" icon={{ ios: 'mappin.and.ellipse', android: 'location_on' }} label="Lugar" value={activity.location} />
+        <Row emphasis="value" icon={{ ios: 'person.badge.shield.checkmark', android: 'supervisor_account' }} label="Supervisión"
           value={supervisor?.fullName ?? 'Sin supervisor'} />
-        {activity.description ? <Row icon={{ ios: 'text.alignleft', android: 'notes' }} label="Descripción" value={activity.description} /> : null}
-        {activity.requirements ? <Row icon={{ ios: 'checklist', android: 'checklist' }} label="Requisitos" value={activity.requirements} /> : null}
+        {activity.description ? <Row emphasis="value" icon={{ ios: 'text.alignleft', android: 'notes' }} label="Descripción" value={activity.description} /> : null}
+        {activity.requirements ? <Row emphasis="value" icon={{ ios: 'checklist', android: 'checklist' }} label="Requisitos" value={activity.requirements} /> : null}
       </Section>
     );
   }
@@ -309,18 +359,16 @@ export default function ActivityDetailScreen() {
   function participantsTab() {
     return (
       <>
-        <View style={styles.stats}>
-          <StatCard testID="activity-assigned-count" label="Asignados" value={`${activity.assignedCount}/${activity.capacity}`}
-            caption={free > 0 ? `${free} ${free === 1 ? 'lugar libre' : 'lugares libres'}` : 'Cupo lleno'}
-            icon={{ ios: 'person.2', android: 'group' }} />
-        </View>
+        <ProgressBar testID="activity-assigned-count" label={`${activity.assignedCount} de ${activity.capacity} asignados`}
+          note={free > 0 ? `${free} ${free === 1 ? 'lugar libre' : 'lugares libres'}` : 'Cupo lleno'}
+          value={activity.assignedCount} max={activity.capacity} />
 
-        {canAssign && free > 0 ? (
+        {canAssign && free > 0 && !cardAssigns ? (
           <Button testID="activity-assign" label="Asignar voluntario" icon={{ ios: 'person.badge.plus', android: 'person_add' }}
             onPress={() => router.push({ pathname: '/actividades/[id]/asignar', params: { id: activity.id } })} />
         ) : null}
 
-        <Section title="Asignados" bare={assigned.length === 0}
+        <Section title="Asignados" inset="avatar" bare={assigned.length === 0}
           footer={activity.status === 'draft' && canEdit ? 'Publica la actividad para poder asignar voluntarios.'
             : canAssign && free <= 0 ? 'Cupo lleno. Para asignar a alguien más, aumenta el cupo o cancela una asignación.' : undefined}>
           {assigned.length === 0 ? (
@@ -333,10 +381,10 @@ export default function ActivityDetailScreen() {
                 label={name} value={formatPhone(entry.phone)}
                 trailing={(
                   <View style={styles.rowActions}>
-                    <IconButton testID={`participant-${entry.volunteerId}-call`} icon={{ ios: 'phone', android: 'call' }}
+                    <IconButton variant="plain" testID={`participant-${entry.volunteerId}-call`} icon={{ ios: 'phone', android: 'call' }}
                       accessibilityLabel={`Llamar a ${name}`} onPress={() => void Linking.openURL(`tel:${entry.phone}`)} />
                     {canAssign ? (
-                      <IconButton testID={`participant-${entry.volunteerId}-menu`} icon={{ ios: 'ellipsis', android: 'more_horiz' }}
+                      <IconButton variant="plain" testID={`participant-${entry.volunteerId}-menu`} icon={{ ios: 'ellipsis', android: 'more_horiz' }}
                         accessibilityLabel={`Más acciones para ${name}`} onPress={() => setMenuFor(entry)} />
                     ) : null}
                   </View>
@@ -346,7 +394,7 @@ export default function ActivityDetailScreen() {
         </Section>
 
         {cancelled.length ? (
-          <Section title="Cancelados">
+          <Section title="Cancelados" inset="avatar">
             {cancelled.map((entry) => (
               <Row key={entry.assignmentId} leading={<Avatar name={`${entry.firstName} ${entry.lastName}`} />}
                 label={`${entry.firstName} ${entry.lastName}`} value={entry.cancelledReason ? `Motivo: ${entry.cancelledReason}` : undefined} />
@@ -368,7 +416,13 @@ export default function ActivityDetailScreen() {
     if (step === 'published') {
       return (
         <EmptyState icon={{ ios: 'clock', android: 'schedule' }} title="La asistencia se abre al empezar"
-          body={`Podrás marcar quién asistió a partir del ${formatDateTime(activity.startsAt)}.`} />
+          body={canStart
+            ? `Se abre sola el ${startsText(activity.startsAt)}. Si las personas ya llegaron, iníciala ahora.`
+            : `Podrás marcar quién asistió a partir del ${startsText(activity.startsAt)}.`}
+          action={canStart ? {
+            testID: 'attendance-start', label: 'Iniciar asistencia', busyLabel: 'Iniciando…', busy: busy === 'start', variant: 'primary',
+            disabled: busy !== null && busy !== 'start', icon: { ios: 'play.circle', android: 'play_circle' }, onPress: confirmStart,
+          } : undefined} />
       );
     }
     if (assigned.length === 0) {
@@ -391,18 +445,21 @@ export default function ActivityDetailScreen() {
           </View>
         ) : (
           <View style={styles.rollHeader}>
-            <Text testID="attendance-progress" accessibilityLiveRegion="polite" style={styles.progress}>
-              {recorded} de {assigned.length} registrados
-            </Text>
-            <FilterChips testID="attendance-filter" options={rollFilterOptions} value={rollFilter} onChange={setRollFilter} />
+            <ProgressBar testID="attendance-progress" label={`${recorded} de ${assigned.length} registrados`}
+              value={recorded} max={assigned.length} tone={unrecorded > 0 ? 'attention' : 'primary'} />
+            {/* Counts in the chips, after Luma's check-in tabs ("Going 3 · Checked In 2"). */}
+            <FilterChips testID="attendance-filter" value={rollFilter} onChange={setRollFilter} options={[
+              { value: 'all', label: `Todos · ${assigned.length}` },
+              { value: 'unrecorded', label: `Sin registrar · ${unrecorded}` },
+            ]} />
           </View>
         )}
 
-        <Section bare={shown.length === 0}
+        <Section inset="avatar" bare={shown.length === 0}
           footer={canRecord ? 'Presente y Falta se guardan al tocarlos. Tarde, o tocar el nombre, abre el registro con horario y horas.' : undefined}>
           {shown.length === 0 ? (
             <EmptyState icon={{ ios: 'checkmark.circle', android: 'task_alt' }} title="Todos registrados"
-              body="Ya registraste a todas las personas asignadas. Revisa la lista completa en “Todos” o finaliza la asistencia." />
+              body="Revisa la lista en “Todos” o finaliza la asistencia." />
           ) : shown.map((entry) => (
             <RollCallRow key={entry.assignmentId} entry={entry} recording={canRecord} busy={Boolean(saving[entry.assignmentId])}
               locked={locked} error={rowErrors[entry.assignmentId]}
@@ -432,15 +489,12 @@ export default function ActivityDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  block: { gap: 16 },
-  stats: { flexDirection: 'row', gap: 12 },
-  rowActions: { flexDirection: 'row', gap: 8 },
-  rollHeader: { gap: 10 },
-  progress: { fontFamily: AppFonts.headingSemiBold, fontSize: 18, color: Brand.text, paddingHorizontal: 4 },
-  summary: { gap: 4, padding: 16, borderRadius: Radius.card, backgroundColor: Brand.primaryLight },
-  summaryValue: { fontFamily: AppFonts.heading, fontSize: 24, color: Brand.text, letterSpacing: -0.4 },
-  summaryText: { fontFamily: AppFonts.body, fontSize: 14, lineHeight: 20, color: Brand.textSecondary },
-  barHint: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textSecondary, textAlign: 'center' },
-  alert: { gap: 4, backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
-  alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
+  rowActions: { flexDirection: 'row' },
+  rollHeader: { gap: Spacing.md },
+  summary: { gap: Spacing.xs, padding: Spacing.lg, borderRadius: Radius.card, backgroundColor: Brand.primaryLight },
+  summaryValue: { ...Type.title, color: Brand.text },
+  summaryText: { ...Type.callout, color: Brand.textSecondary },
+  barHint: { ...Type.footnote, color: Brand.textSecondary, textAlign: 'center' },
+  alert: { gap: Spacing.xs, backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: Spacing.md, paddingHorizontal: 14 },
+  alertText: { ...Type.callout, color: Brand.dangerText },
 });

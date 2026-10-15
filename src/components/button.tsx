@@ -2,11 +2,11 @@ import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { Brand, Radius, Type } from '@/constants/theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'critical';
 
-interface ButtonProps {
+export interface ButtonProps {
   label: string;
   // Shown while `busy`, so the button says what is happening ("Entrando…") instead of just spinning.
   busyLabel?: string;
@@ -56,5 +56,5 @@ const styles = StyleSheet.create({
   },
   busy: { opacity: 0.75 },
   disabled: { opacity: 0.45 },
-  label: { fontFamily: AppFonts.bodySemiBold, fontSize: 16, letterSpacing: 0.2 },
+  label: { ...Type.bodyStrong, letterSpacing: 0.2 },
 });

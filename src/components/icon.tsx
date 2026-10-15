@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import type { ComponentProps } from 'react';
-import type { ColorValue } from 'react-native';
+import { useWindowDimensions, type ColorValue } from 'react-native';
 
 type SymbolName = ComponentProps<typeof SymbolView>['name'];
 
@@ -12,5 +12,13 @@ interface IconProps {
 }
 
 export function Icon({ name, size = 22, color }: IconProps) {
-  return <SymbolView name={name} size={size} tintColor={color} accessibilityElementsHidden importantForAccessibility="no" />;
+  const { fontScale } = useWindowDimensions();
+  // On Android and web the symbol is a font glyph that grows with the system text size inside a box
+  // that doesn't, so at large text it was clipped to a sliver. Shrinking the glyph by the font scale
+  // and pinning the box keeps every icon at its designed size.
+  const glyph = process.env.EXPO_OS === 'ios' ? size : size / fontScale;
+  return (
+    <SymbolView name={name} size={glyph} style={{ width: size, height: size }} tintColor={color}
+      accessibilityElementsHidden importantForAccessibility="no" />
+  );
 }

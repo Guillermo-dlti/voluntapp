@@ -3,9 +3,11 @@ import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, type TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AmbientBackground } from '@/components/ambient-background';
 import { Button } from '@/components/button';
 import { FormField } from '@/components/form-field';
-import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { IconButton } from '@/components/icon-button';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { authMessage } from '@/services/auth';
 
@@ -18,6 +20,7 @@ export default function Login() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const pending = useRef(false);
   const passwordRef = useRef<TextInput>(null);
 
@@ -44,6 +47,7 @@ export default function Login() {
 
   return (
     <View style={styles.root}>
+      <AmbientBackground />
       <SafeAreaView edges={['top']} style={styles.band}>
         <Image source={require('@/assets/images/bamx-logo.png')} style={styles.logo} contentFit="contain"
           accessibilityLabel="Logotipo del Banco de Alimentos de Guadalajara" />
@@ -66,8 +70,13 @@ export default function Login() {
             returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => passwordRef.current?.focus()} />
           <FormField ref={passwordRef} testID="login-password-input" label="Contraseña" value={password} editable={!busy}
             onChangeText={(value) => { setPassword(value); clearFeedback(); }} error={errors.password}
-            secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="current-password"
-            textContentType="password" maxLength={128} returnKeyType="go" onSubmitEditing={() => void handleLogin()} />
+            secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} autoComplete="current-password"
+            textContentType="password" maxLength={128} returnKeyType="go" onSubmitEditing={() => void handleLogin()}
+            trailing={(
+              <IconButton variant="plain" testID="login-password-toggle"
+                icon={showPassword ? { ios: 'eye.slash', android: 'visibility_off' } : { ios: 'eye', android: 'visibility' }}
+                accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} onPress={() => setShowPassword((shown) => !shown)} />
+            )} />
 
           {alert ? (
             <View accessibilityRole="alert" style={styles.alert}>
@@ -88,15 +97,15 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.forest },
   band: { alignItems: 'flex-start', paddingHorizontal: 28, paddingBottom: 40, paddingTop: 28, gap: 6 },
   logo: { width: 56, height: 78, marginBottom: 14 },
-  org: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.forestMuted },
-  wordmark: { fontFamily: AppFonts.heading, fontSize: 40, color: Brand.forestText, letterSpacing: -1 },
+  org: { ...Type.callout, color: Brand.forestMuted },
+  wordmark: { fontFamily: Type.display.fontFamily, fontSize: 40, color: Brand.forestText, letterSpacing: -1 },
   sheetWrap: { flex: 1 },
   sheet: { flex: 1, backgroundColor: Brand.surface, borderTopLeftRadius: Radius.sheet, borderTopRightRadius: Radius.sheet },
   sheetContent: { padding: 28, paddingBottom: 40, gap: 18, width: '100%', maxWidth: 520, alignSelf: 'center' },
   heading: { gap: 6, marginBottom: 6 },
-  title: { fontFamily: AppFonts.heading, fontSize: 26, color: Brand.text, letterSpacing: -0.4 },
-  subtitle: { fontFamily: AppFonts.body, fontSize: 15, color: Brand.textSecondary, lineHeight: 21 },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
-  alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
-  help: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center', lineHeight: 20, marginTop: 4 },
+  title: { ...Type.title, color: Brand.text },
+  subtitle: { ...Type.callout, fontSize: 15, color: Brand.textSecondary },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: Spacing.md, paddingHorizontal: 14 },
+  alertText: { ...Type.callout, color: Brand.dangerText },
+  help: { ...Type.callout, color: Brand.textSecondary, textAlign: 'center', marginTop: Spacing.xs },
 });

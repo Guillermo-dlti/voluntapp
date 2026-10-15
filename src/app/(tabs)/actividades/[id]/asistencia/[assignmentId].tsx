@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -9,9 +9,11 @@ import { FilterChips } from '@/components/filter-chips';
 import { FormField } from '@/components/form-field';
 import { Screen } from '@/components/screen';
 import { TimeField } from '@/components/time-field';
+import { SkeletonForm } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
-import { AppFonts, Brand } from '@/constants/theme';
+import { Brand, Radius, Type } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import {
   correctAttendance, getActivity, recordAttendance,
@@ -29,6 +31,7 @@ const statusOptions = (Object.keys(attendanceStatusLabels) as AttendanceStatus[]
 // Records one person's attendance, or, once the activity is finalized, lets an admin correct it with a reason.
 export default function AttendanceFormScreen() {
   const router = useRouter();
+  const feedback = useFeedback();
   // `status` preselects a choice, as when "Tarde" is tapped in the roll call.
   const { id, assignmentId, status: preset } = useLocalSearchParams<{ id: string; assignmentId: string; status?: string }>();
   const { user, refresh } = useAuth();
@@ -87,6 +90,7 @@ export default function AttendanceFormScreen() {
       const payload = attendancePayload(draft, activity);
       if (correcting) await correctAttendance(activity.id, participant.assignmentId, { ...payload, reason: draft.reason.trim() });
       else await recordAttendance(activity.id, participant.assignmentId, payload);
+      feedback.toast(correcting ? 'Corrección guardada.' : 'Asistencia guardada.');
       router.back();
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
@@ -111,7 +115,7 @@ export default function AttendanceFormScreen() {
       </View>
     );
   } else if (!detail || !activity) {
-    body = <ActivityIndicator color={Brand.primary} />;
+    body = <SkeletonForm fields={4} />;
   } else if (!participant || !draft) {
     body = <EmptyState icon={{ ios: 'person.crop.circle.badge.xmark', android: 'person_off' }} title="Esta persona ya no está asignada"
       body="Solo se registra la asistencia de personas asignadas. Regresa a la actividad para ver la lista actual." />;
@@ -174,11 +178,11 @@ const styles = StyleSheet.create({
   block: { gap: 16 },
   form: { gap: 24 },
   group: { gap: 8 },
-  groupTitle: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.textSecondary, paddingHorizontal: 4 },
+  groupTitle: { ...Type.calloutStrong, color: Brand.textSecondary, paddingHorizontal: 4 },
   groupBody: { gap: 16 },
-  hint: { fontFamily: AppFonts.body, color: Brand.textSecondary, fontSize: 13, paddingHorizontal: 4 },
-  fieldError: { fontFamily: AppFonts.body, color: Brand.dangerText, fontSize: 13, paddingHorizontal: 4 },
+  hint: { ...Type.footnote, color: Brand.textSecondary, paddingHorizontal: 4 },
+  fieldError: { ...Type.footnote, color: Brand.dangerText, paddingHorizontal: 4 },
   multiline: { minHeight: 100, paddingTop: 14 },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
-  alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
+  alertText: { ...Type.callout, color: Brand.dangerText },
 });

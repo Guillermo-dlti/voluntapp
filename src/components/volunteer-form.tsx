@@ -1,11 +1,10 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, Text, View, type TextInput } from 'react-native';
 
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { DateField } from '@/components/date-field';
-import { FormField } from '@/components/form-field';
-import { AppFonts, Brand } from '@/constants/theme';
+import { FieldGroup, FormField } from '@/components/form-field';
+import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 import { ApiError } from '@/services/api';
 import { birthDateRange } from '@/utils/time';
 import { validateDraft, type DraftErrors, type DraftField, type VolunteerDraft } from '@/utils/volunteer-rules';
@@ -73,7 +72,7 @@ export function VolunteerForm({ initial, submitLabel, busyLabel, onSubmit, onSes
 
   return (
     <View style={styles.form}>
-      <FormGroup title="Datos personales">
+      <FieldGroup title="Datos personales">
         <FormField testID="volunteer-first-name" label="Nombre" value={draft.firstName} onChangeText={set('firstName')}
           error={errors.firstName} maxLength={60} autoCapitalize="words" autoComplete="name-given" returnKeyType="next"
           submitBehavior="submit" onSubmitEditing={() => refs.lastName.current?.focus()} {...common} />
@@ -82,32 +81,32 @@ export function VolunteerForm({ initial, submitLabel, busyLabel, onSubmit, onSes
           submitBehavior="submit" onSubmitEditing={() => refs.phone.current?.focus()} {...common} />
         <DateField testID="volunteer-birth-date" label="Fecha de nacimiento (opcional)" value={draft.birthDate}
           onChange={set('birthDate')} error={errors.birthDate} min={range.min} max={range.max} start={range.start} />
-      </FormGroup>
+      </FieldGroup>
 
-      <FormGroup title="Contacto">
-        <FormField ref={refs.phone} testID="volunteer-phone" label="Teléfono" value={draft.phone} onChangeText={set('phone')}
+      <FieldGroup title="Contacto">
+        <FormField ref={refs.phone} testID="volunteer-phone" label="Teléfono" value={draft.phone} onChangeText={set('phone')} placeholder="Ej.: 33 1234 5678"
           error={errors.phone} hint="10 dígitos. Para un número de otro país, empieza con +." keyboardType="phone-pad"
           autoComplete="tel" maxLength={20} returnKeyType="next" submitBehavior="submit"
           onSubmitEditing={() => refs.email.current?.focus()} {...common} />
-        <FormField ref={refs.email} testID="volunteer-email" label="Correo (opcional)" value={draft.email} onChangeText={set('email')}
+        <FormField ref={refs.email} testID="volunteer-email" label="Correo (opcional)" value={draft.email} onChangeText={set('email')} placeholder="Ej.: nombre@correo.com"
           error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={254}
           returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => refs.emergencyContactName.current?.focus()} {...common} />
-      </FormGroup>
+      </FieldGroup>
 
-      <FormGroup title="Contacto de emergencia">
+      <FieldGroup title="Contacto de emergencia">
         <FormField ref={refs.emergencyContactName} testID="volunteer-emergency-name" label="Nombre" value={draft.emergencyContactName}
           onChangeText={set('emergencyContactName')} error={errors.emergencyContactName} maxLength={100} autoCapitalize="words"
           returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => refs.emergencyContactPhone.current?.focus()} {...common} />
         <FormField ref={refs.emergencyContactPhone} testID="volunteer-emergency-phone" label="Teléfono" value={draft.emergencyContactPhone}
           onChangeText={set('emergencyContactPhone')} error={errors.emergencyContactPhone} keyboardType="phone-pad" maxLength={20}
           returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => refs.notes.current?.focus()} {...common} />
-      </FormGroup>
+      </FieldGroup>
 
-      <FormGroup title="Notas">
+      <FieldGroup title="Notas">
         <FormField ref={refs.notes} testID="volunteer-notes" label="Notas (opcional)" value={draft.notes} onChangeText={set('notes')}
           error={errors.notes} hint="Disponibilidad, habilidades o lo que el equipo deba saber." multiline maxLength={1000}
           style={styles.notes} textAlignVertical="top" {...common} />
-      </FormGroup>
+      </FieldGroup>
 
       {message ? (
         <View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{message}</Text></View>
@@ -117,21 +116,9 @@ export function VolunteerForm({ initial, submitLabel, busyLabel, onSubmit, onSes
   );
 }
 
-function FormGroup({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={styles.group}>
-      <Text accessibilityRole="header" style={styles.groupTitle}>{title}</Text>
-      <Card><View style={styles.groupBody}>{children}</View></Card>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  form: { gap: 24 },
-  group: { gap: 8 },
-  groupTitle: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.textSecondary, paddingHorizontal: 4 },
-  groupBody: { gap: 16 },
+  form: { gap: Spacing.xl },
   notes: { minHeight: 110, paddingTop: 14 },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
-  alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: Spacing.md, paddingHorizontal: 14 },
+  alertText: { ...Type.callout, color: Brand.dangerText },
 });

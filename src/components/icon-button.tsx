@@ -11,17 +11,21 @@ interface IconButtonProps {
   onPress: () => void;
   // true inside the forest header band.
   onDark?: boolean;
+  // 'plain' drops the border, for actions repeated on every row of a list (call, more), where a box
+  // per row would outweigh the names (after Teams' and Discord's member lists).
+  variant?: 'bordered' | 'plain';
   disabled?: boolean;
   testID?: string;
 }
 
-// A square, flat, bordered button with only an icon. 48 dp, the Android minimum touch target.
-export function IconButton({ icon, accessibilityLabel, onPress, onDark = false, disabled = false, testID }: IconButtonProps) {
+// A square, flat button with only an icon. 48 dp either way, the Android minimum touch target.
+export function IconButton({ icon, accessibilityLabel, onPress, onDark = false, variant = 'bordered', disabled = false, testID }: IconButtonProps) {
   return (
     <PressableScale testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
-      style={[styles.button, onDark && styles.dark, disabled && styles.disabled]}>
-      <Icon name={icon} size={20} color={onDark ? Brand.forestText : Brand.text} />
+      android_ripple={variant === 'plain' ? { color: Brand.surfaceMuted, borderless: true } : undefined}
+      style={[styles.button, variant === 'plain' ? styles.plain : onDark && styles.dark, disabled && styles.disabled]}>
+      <Icon name={icon} size={20} color={onDark ? Brand.forestText : variant === 'plain' ? Brand.primary : Brand.text} />
     </PressableScale>
   );
 }
@@ -37,6 +41,7 @@ const styles = StyleSheet.create({
     borderColor: Brand.border,
     backgroundColor: Brand.surface,
   },
+  plain: { borderColor: 'transparent', backgroundColor: 'transparent', borderRadius: Radius.pill },
   dark: { backgroundColor: 'transparent', borderColor: Brand.forestMuted },
   disabled: { opacity: 0.45 },
 });

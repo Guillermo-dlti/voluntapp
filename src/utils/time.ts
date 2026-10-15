@@ -89,6 +89,17 @@ export function formatSchedule(startsAt: string, endsAt: string): string {
   return `${day(start.date)}, ${formatTime(start.time)} a ${day(end.date)}, ${formatTime(end.time)}`;
 }
 
+// Only the hours, for a row whose date tile already says the day: "9:00 a.m. a 1:00 p.m.", or
+// "9:00 p.m. a 2:00 a.m. del 16 oct" when it ends on another day.
+export function formatTimeRange(startsAt: string, endsAt: string): string {
+  const start = mexicoParts(startsAt);
+  const end = mexicoParts(endsAt);
+  const range = `${formatTime(start.time)} a ${formatTime(end.time)}`;
+  if (start.date === end.date) return range;
+  const day = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${end.date}T00:00:00Z`));
+  return `${range} del ${day.replace('.', '')}`;
+}
+
 // Today in Guadalajara as YYYY-MM-DD.
 export function todayInMexico(now = new Date()): string {
   return mexicoParts(now).date;

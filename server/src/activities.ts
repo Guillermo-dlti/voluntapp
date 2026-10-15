@@ -64,6 +64,7 @@ const listSchema = z.object({
   when: z.enum(['upcoming', 'pending', 'past', 'cancelled', 'all']).default('upcoming'),
   q: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
+  mine: z.literal('true').optional(),
 });
 
 type EditInput = z.infer<typeof editSchema>;
@@ -114,6 +115,7 @@ export function publicActivity(activity: Activity) {
     requirements: activity.requirements ?? null,
     status: activity.status,
     supervisorId: activity.supervisorId?.toHexString() ?? null,
+    attendanceStartedAt: activity.attendanceStartedAt?.toISOString() ?? null,
     attendanceFinalizedAt: activity.attendanceFinalizedAt?.toISOString() ?? null,
     createdAt: activity.createdAt.toISOString(),
     updatedAt: activity.updatedAt.toISOString(),
@@ -143,19 +145,49 @@ function publicAssignment(assignment: Assignment) {
   };
 }
 
-function listQuery(when: z.infer<typeof listSchema>['when'], q: string | undefined) {
+export type WhenFilter = z.infer<typeof listSchema>['when'];
+
+// The fields an activity list row needs; toActivitySummary() reads exactly these.
+export const summaryProjection = { name: 1, location: 1, startsAt: 1, endsAt: 1, capacity: 1, assignedCount: 1, status: 1, attendanceStartedAt: 1, attendanceFinalizedAt: 1 } as const;
+
+export function toActivitySummary(activity: Pick<Activity, '_id' | keyof typeof summaryProjection>) {
+  return {
+    id: activity._id.toHexString(),
+    name: activity.name,
+    location: activity.location,
+    startsAt: activity.startsAt.toISOString(),
+    endsAt: activity.endsAt.toISOString(),
+    capacity: activity.capacity,
+    assignedCount: activity.assignedCount,
+    status: activity.status,
+    attendanceStartedAt: activity.attendanceStartedAt?.toISOString() ?? null,
+    attendanceFinalizedAt: activity.attendanceFinalizedAt?.toISOString() ?? null,
+  };
+}
+
+// "My activities" for a supervisor: ones they supervise that are confirmed (a draft isn't on their plan yet).
+export const ownActivities = (staffId: ObjectId): Filter<Activity> => ({ supervisorId: staffId, status: { $ne: 'draft' } });
+
+// Attendance can be taken once the activity has started, or earlier once staff started it by hand.
+// Recording, finalizing, "Por finalizar" and the reports' pending count all use this, so they agree.
+export const attendanceOpened = (now: Date): Filter<Activity> => ({ $or: [{ startsAt: { $lte: now } }, { attendanceStartedAt: { $exists: true } }] });
+
+// The one rule behind the Actividades list and the dashboard sections, so they can't disagree.
+// `mine` narrows any `when` to the caller's own activities.
+export function activityListFilter(when: WhenFilter, q: string | undefined, mine?: ObjectId) {
   const now = new Date();
   const live: Status[] = ['draft', 'open'];
   let filter: Filter<Activity>;
   if (when === 'upcoming') filter = { status: { $in: live }, endsAt: { $gt: now } };
-  // Exactly what the finalize endpoint accepts and what reports count as pending: started, open or
-  // closed, attendance not finalized. Oldest first, since those hours have waited longest.
-  else if (when === 'pending') filter = { status: { $in: ['open', 'closed'] }, startsAt: { $lte: now }, attendanceFinalizedAt: { $exists: false } };
+  // Exactly what the finalize endpoint accepts and what reports count as pending: started (or started
+  // by hand), open or closed, attendance not finalized. Oldest first, since those hours have waited longest.
+  else if (when === 'pending') filter = { status: { $in: ['open', 'closed'] }, attendanceFinalizedAt: { $exists: false }, ...attendanceOpened(now) };
   else if (when === 'past') filter = { $or: [{ status: 'closed' }, { status: { $in: live }, endsAt: { $lte: now } }] };
   else if (when === 'cancelled') filter = { status: 'cancelled' };
   else filter = {};
   const words = searchWords(q);
-  if (words.length) filter = { $and: [filter, ...words.map((word) => ({ name: searchPattern(word) }))] };
+  const narrowing = [...words.map((word): Filter<Activity> => ({ name: searchPattern(word) })), ...(mine ? [ownActivities(mine)] : [])];
+  if (narrowing.length) filter = { $and: [filter, ...narrowing] };
   const direction = when === 'upcoming' || when === 'pending' ? 1 : -1;
   return { filter, sort: { startsAt: direction, _id: direction } as const };
 }
@@ -222,26 +254,16 @@ export function activitiesRouter(collections: V2Collections, client: MongoClient
       response.status(400).json({ message: 'La búsqueda no es válida. Revisa el texto e inténtalo de nuevo.' });
       return;
     }
-    const { when, q, page } = parsed.data;
-    const { filter, sort } = listQuery(when, q);
+    const { when, q, page, mine } = parsed.data;
+    const { filter, sort } = activityListFilter(when, q, mine ? currentStaff(response).id : undefined);
     const found = await activities.find(filter, {
-      projection: { name: 1, location: 1, startsAt: 1, endsAt: 1, capacity: 1, assignedCount: 1, status: 1, attendanceFinalizedAt: 1 },
+      projection: summaryProjection,
       sort,
       skip: (page - 1) * PAGE_SIZE,
       limit: PAGE_SIZE + 1,
     }).toArray();
     response.json({
-      activities: found.slice(0, PAGE_SIZE).map((activity) => ({
-        id: activity._id.toHexString(),
-        name: activity.name,
-        location: activity.location,
-        startsAt: activity.startsAt.toISOString(),
-        endsAt: activity.endsAt.toISOString(),
-        capacity: activity.capacity,
-        assignedCount: activity.assignedCount,
-        status: activity.status,
-        attendanceFinalizedAt: activity.attendanceFinalizedAt?.toISOString() ?? null,
-      })),
+      activities: found.slice(0, PAGE_SIZE).map(toActivitySummary),
       page,
       hasMore: found.length > PAGE_SIZE,
     });

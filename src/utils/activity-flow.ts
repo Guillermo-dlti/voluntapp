@@ -9,9 +9,9 @@ import { formatDateTime } from '@/utils/time';
 
 export type ActivityStep = 'draft' | 'published' | 'attendance' | 'finalized' | 'cancelled';
 export type DetailTab = 'detalles' | 'participantes' | 'asistencia';
-export type NextAction = 'publish' | 'assign' | 'take-attendance' | 'finalize';
+export type NextAction = 'publish' | 'assign' | 'start-attendance' | 'take-attendance' | 'finalize';
 
-type Timing = Pick<ActivitySummary, 'status' | 'startsAt' | 'attendanceFinalizedAt'>;
+type Timing = Pick<ActivitySummary, 'status' | 'startsAt' | 'attendanceStartedAt' | 'attendanceFinalizedAt'>;
 
 // The four steps of the progress strip, in order. Cancelled is a card, not a step.
 export const flowSteps: readonly { step: Exclude<ActivityStep, 'cancelled'>; label: string }[] = [
@@ -27,7 +27,8 @@ export function activityStep(activity: Timing, now = new Date()): ActivityStep {
   if (activity.status === 'cancelled') return 'cancelled';
   if (activity.attendanceFinalizedAt) return 'finalized';
   if (activity.status === 'draft') return 'draft';
-  return new Date(activity.startsAt) > now ? 'published' : 'attendance';
+  // Attendance opens at the start time, or earlier when staff started it by hand.
+  return new Date(activity.startsAt) > now && !activity.attendanceStartedAt ? 'published' : 'attendance';
 }
 
 export function defaultTab(step: ActivityStep): DetailTab {
@@ -74,7 +75,8 @@ export function nextStep(detail: ActivityDetail, viewer: Viewer, now = new Date(
   const canEdit = roleCan.editActivities(viewer.role);
   const canAssign = roleCan.assignVolunteers(viewer.role);
   const canRecord = canRecordOn(detail, viewer);
-  const starts = `Empieza el ${formatDateTime(activity.startsAt)}.`;
+  // The time already ends in "a.m."/"p.m.", so no second period.
+  const starts = `Empieza el ${formatDateTime(activity.startsAt).replace(/\.$/, '')}.`;
 
   if (step === 'cancelled') return { text: 'Actividad cancelada. Sus asignaciones se conservan.' };
   if (step === 'finalized') return { text: `Asistencia finalizada. ${hoursText(countedHours(participants))} h contadas.` };
@@ -85,11 +87,14 @@ export function nextStep(detail: ActivityDetail, viewer: Viewer, now = new Date(
     };
   }
   if (step === 'published') {
-    if (activity.status === 'closed') return { text: `${starts} Inscripciones cerradas.` };
-    if (activity.assignedCount >= activity.capacity) return { text: `${starts} Cupo lleno.` };
+    // Assigning comes first while there's room; once it's full or closed (or the role can't assign),
+    // the next thing is opening attendance early. The Asistencia tab offers it in every case.
+    const start = canRecord && activity.assignedCount > 0 ? { action: { kind: 'start-attendance', label: 'Iniciar asistencia' } as const } : {};
+    if (activity.status === 'closed') return { text: `${starts} Inscripciones cerradas.`, ...start };
+    if (activity.assignedCount >= activity.capacity) return { text: `${starts} Cupo lleno.`, ...start };
     return {
       text: `${starts} Asignados ${activity.assignedCount} de ${activity.capacity}.`,
-      ...(canAssign ? { action: { kind: 'assign', label: 'Asignar voluntarios' } } : {}),
+      ...(canAssign ? { action: { kind: 'assign', label: 'Asignar voluntarios' } } : start),
     };
   }
   const { assigned, recorded } = rollCall(participants);
@@ -114,16 +119,30 @@ export function nextStep(detail: ActivityDetail, viewer: Viewer, now = new Date(
 }
 
 export type HintTone = 'neutral' | 'full' | 'attention';
+export type StepTone = 'success' | 'neutral' | 'attention' | 'critical';
 
-// One line under each row of the Actividades list saying what the activity needs next.
+// The pill for an activity, from its step rather than its stored status, so a list row and the detail
+// band never say "Publicada" while the activity is waiting on attendance.
+export function stepBadge(activity: Timing, now = new Date()): { label: string; tone: StepTone } {
+  const step = activityStep(activity, now);
+  if (step === 'cancelled') return { label: 'Cancelada', tone: 'critical' };
+  if (step === 'finalized') return { label: 'Finalizada', tone: 'neutral' };
+  if (step === 'attendance') return { label: 'Por finalizar', tone: 'attention' };
+  if (step === 'draft') return { label: 'Borrador', tone: 'attention' };
+  return activity.status === 'closed' ? { label: 'Inscripciones cerradas', tone: 'neutral' } : { label: 'Publicada', tone: 'success' };
+}
+
+// The one fact a list row adds next to its pill: how full it is, or that it is full. The pill already
+// says the step, so the row never repeats it (and never shows both "6/10" and "faltan 4").
 export function listHint(activity: ActivitySummary, now = new Date()): { text: string; tone: HintTone } | null {
   const step = activityStep(activity, now);
   if (step === 'cancelled') return null;
-  if (step === 'draft') return { text: 'Borrador: falta publicar', tone: 'neutral' };
-  if (step === 'finalized') return { text: 'Asistencia finalizada', tone: 'neutral' };
-  if (step === 'attendance') return { text: 'Asistencia por finalizar', tone: 'attention' };
-  if (activity.status !== 'open') return null;
-  const free = activity.capacity - activity.assignedCount;
-  if (free <= 0) return { text: 'Cupo lleno', tone: 'full' };
-  return { text: free === 1 ? 'Falta 1 lugar' : `Faltan ${free} lugares`, tone: 'neutral' };
+  if (step === 'draft') return { text: `Cupo de ${activity.capacity}`, tone: 'neutral' };
+  if (step === 'published' && activity.status === 'open' && activity.assignedCount >= activity.capacity) {
+    return { text: 'Cupo lleno', tone: 'full' };
+  }
+  if (step === 'published' && activity.status === 'open') {
+    return { text: `${activity.assignedCount} de ${activity.capacity} asignados`, tone: 'neutral' };
+  }
+  return { text: activity.assignedCount === 1 ? '1 asignado' : `${activity.assignedCount} asignados`, tone: step === 'attendance' ? 'attention' : 'neutral' };
 }

@@ -434,7 +434,11 @@ export default function ActivityDetailScreen() {
       );
     }
 
-    const shown = rollFilter === 'unrecorded' && !finalized ? assigned.filter((entry) => entry.attendance === null) : assigned;
+    // While attendance is open, people who checked in with their QR are already counted, so they leave
+    // the roll call (which is for whoever still needs a hand) and wait in their own section.
+    const scanned = finalized ? [] : assigned.filter((entry) => entry.attendance?.method === 'qr');
+    const roll = finalized ? assigned : assigned.filter((entry) => entry.attendance?.method !== 'qr');
+    const shown = rollFilter === 'unrecorded' && !finalized ? roll.filter((entry) => entry.attendance === null) : roll;
     const locked = busy === 'mark-all' || busy === 'finalize';
 
     return (
@@ -451,7 +455,7 @@ export default function ActivityDetailScreen() {
               value={recorded} max={assigned.length} tone={unrecorded > 0 ? 'attention' : 'primary'} />
             {/* Counts in the chips, after Luma's check-in tabs ("Going 3 · Checked In 2"). */}
             <FilterChips testID="attendance-filter" value={rollFilter} onChange={setRollFilter} options={[
-              { value: 'all', label: `Todos · ${assigned.length}` },
+              { value: 'all', label: `Todos · ${roll.length}` },
               { value: 'unrecorded', label: `Sin registrar · ${unrecorded}` },
             ]} />
             {canScan ? (
@@ -462,11 +466,12 @@ export default function ActivityDetailScreen() {
           </View>
         )}
 
-        <Section inset="avatar" bare={shown.length === 0}
-          footer={canRecord ? 'Presente y Falta se guardan al tocarlos. Tarde, o tocar el nombre, abre el registro con horario y horas.' : undefined}>
+        <Section inset="avatar" bare={shown.length === 0} title={scanned.length ? 'Por registrar' : undefined}
+          footer={canRecord && shown.length ? 'Presente y Falta se guardan al tocarlos. Tarde, o tocar el nombre, abre el registro con horario y horas.' : undefined}>
           {shown.length === 0 ? (
             <EmptyState icon={{ ios: 'checkmark.circle', android: 'task_alt' }} title="Todos registrados"
-              body="Revisa la lista en “Todos” o finaliza la asistencia." />
+              body={scanned.length && roll.length === 0 ? 'Todas las personas llegaron con su QR. Ya puedes finalizar la asistencia.'
+                : 'Revisa la lista en “Todos” o finaliza la asistencia.'} />
           ) : shown.map((entry) => (
             <RollCallRow key={entry.assignmentId} entry={entry} recording={canRecord} busy={Boolean(saving[entry.assignmentId])}
               locked={locked} error={rowErrors[entry.assignmentId]}
@@ -477,6 +482,17 @@ export default function ActivityDetailScreen() {
               onOpen={canRecord || canCorrect ? () => openForm(entry) : undefined} />
           ))}
         </Section>
+
+        {scanned.length ? (
+          <Section title="Llegaron con QR" count={String(scanned.length)} inset="avatar"
+            footer={canRecord || canCorrect ? 'Ya cuentan para la asistencia. Toca a una persona para cambiar su horario u horas.' : 'Ya cuentan para la asistencia.'}>
+            {scanned.map((entry) => (
+              <RollCallRow key={entry.assignmentId} entry={entry} recording={false} busy={false} locked={locked}
+                error={rowErrors[entry.assignmentId]} onChoose={() => undefined}
+                onOpen={canRecord || canCorrect ? () => openForm(entry) : undefined} />
+            ))}
+          </Section>
+        ) : null}
 
         {attendanceMessage ? (
           <View accessibilityRole="alert" style={styles.alert}>

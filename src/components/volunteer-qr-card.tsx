@@ -15,13 +15,15 @@ interface VolunteerQrCardProps {
   // Admin and coordinator; the API refuses anyone else anyway.
   canRegenerate: boolean;
   onChanged: (volunteer: Volunteer) => void;
+  // Opens the printable card preview; omitted for roles that can't manage volunteers.
+  onPrint?: () => void;
 }
 
 const QR_SIZE = 200;
 
 // The volunteer's check in QR. It encodes only their random token, so a screenshot or printed card
 // carries no personal data; staff scan it from an activity's Asistencia tab.
-export function VolunteerQrCard({ volunteer, canRegenerate, onChanged }: VolunteerQrCardProps) {
+export function VolunteerQrCard({ volunteer, canRegenerate, onChanged, onPrint }: VolunteerQrCardProps) {
   const { refresh } = useAuth();
   const feedback = useFeedback();
   const [busy, setBusy] = useState(false);
@@ -72,10 +74,16 @@ export function VolunteerQrCard({ volunteer, canRegenerate, onChanged }: Volunte
         <Text testID="volunteer-qr-missing" style={styles.caption}>Este voluntario aún no tiene código QR.</Text>
       )}
       {message ? <View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{message}</Text></View> : null}
-      {canRegenerate ? (
+      {canRegenerate || (token && onPrint) ? (
         <View style={styles.action}>
+          {token && onPrint ? (
+            <Button testID="volunteer-qr-print" label="Imprimir tarjeta" variant="secondary"
+              icon={{ ios: 'printer', android: 'print' }} onPress={onPrint} />
+          ) : null}
+          {canRegenerate ? (
           <Button testID="volunteer-qr-regenerate" label={token ? 'Generar nuevo código' : 'Generar código'} busyLabel="Generando…"
             busy={busy} variant="secondary" icon={{ ios: 'qrcode', android: 'qr_code_2' }} onPress={confirmRegenerate} />
+          ) : null}
         </View>
       ) : null}
     </Card>
@@ -86,7 +94,7 @@ const styles = StyleSheet.create({
   body: { alignItems: 'center', gap: Spacing.md },
   code: { borderRadius: Radius.tile, overflow: 'hidden' },
   caption: { ...Type.footnote, color: Brand.textSecondary, textAlign: 'center' },
-  action: { marginTop: Spacing.lg },
+  action: { marginTop: Spacing.lg, gap: Spacing.sm },
   alert: { marginTop: Spacing.md, backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: Spacing.md, paddingHorizontal: 14 },
   alertText: { ...Type.callout, color: Brand.dangerText },
 });

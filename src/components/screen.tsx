@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, type ReactNode } from 'react';
-import { RefreshControl, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Platform, RefreshControl, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Extrapolation, interpolate, scrollTo, useAnimatedRef, useAnimatedScrollHandler, useAnimatedStyle, useDerivedValue, useSharedValue,
 } from 'react-native-reanimated';
@@ -9,6 +9,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Brand, Radius, Spacing, Type } from '@/constants/theme';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useMotion } from '@/utils/motion';
 
 interface ScreenProps {
@@ -47,6 +48,9 @@ const OPEN = 10_000;
 const TOP_ROW = 44;
 // Space under the band's content, trimmed once the title collapses.
 const BAND_BOTTOM = { open: Spacing.xxl, collapsed: Spacing.lg };
+// Space under the last item, and the larger space that keeps it reachable above a floating button.
+const CONTENT_END = 40;
+const FAB_ROOM = 110;
 // How close to the end of the content `onEndReached` fires.
 const END_THRESHOLD = 400;
 
@@ -57,6 +61,7 @@ const END_THRESHOLD = 400;
 // band simply stays as it is.
 export function Screen({ testID, title, titleTestID, onBack, eyebrow, subtitle, action, band, floating, footer, scroll = true, refreshing = false, onRefresh, onEndReached, children }: ScreenProps) {
   const { reduced } = useMotion();
+  const bottomInset = useTabBarInset();
   const topRow = Boolean(onBack || action);
   const scrollY = useSharedValue(0);
   // The large block's natural height, and whether the content is long enough to fold it: on a short
@@ -77,9 +82,12 @@ export function Screen({ testID, title, titleTestID, onBack, eyebrow, subtitle, 
 
   // How far the title folds, or 0 when it shouldn't (Reduce Motion, short page). Reads stay inline so
   // Reanimated tracks them.
+  // Folding fully takes a scroll of `room`, and the folded band hands the sheet `room` more viewport, so
+  // the page must be at least two rooms taller than the open viewport. Any shorter and the scroll can't
+  // reach the folded point: the title and the scroll fight, and the page jitters and sticks.
   const foldRoom = useDerivedValue(() => {
     const room = largeHeight.get() - (topRow ? 0 : COMPACT);
-    return !collapsible || room <= 0 || contentHeight.get() <= viewport.get() + room ? 0 : room;
+    return !collapsible || room <= 0 || contentHeight.get() < viewport.get() + 2 * room ? 0 : room;
   });
   // 0 while the large title shows, 1 once it's folded.
   const progress = useDerivedValue(() => {
@@ -166,7 +174,11 @@ export function Screen({ testID, title, titleTestID, onBack, eyebrow, subtitle, 
       </SafeAreaView>
       <View style={styles.sheet}>
         {scroll ? (
-          <Animated.ScrollView ref={scrollRef} contentContainerStyle={[styles.content, floating ? styles.roomForFab : null]} showsVerticalScrollIndicator={false}
+          <Animated.ScrollView ref={scrollRef} contentContainerStyle={[styles.content, { paddingBottom: (floating ? FAB_ROOM : CONTENT_END) + (footer ? 0 : bottomInset) }]}
+            // The inset is added by hand above, so iOS mustn't add the tab bar a second time.
+            contentInsetAdjustmentBehavior="never" showsVerticalScrollIndicator={false}
+            // Scrolling down closes the keyboard; on iOS the content also scrolls clear of it while typing.
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} automaticallyAdjustKeyboardInsets
             keyboardShouldPersistTaps="handled" scrollEventThrottle={16} onScroll={onScroll}
             onLayout={(event) => { if (scrollY.get() <= 0) viewport.set(event.nativeEvent.layout.height); }}
             onContentSizeChange={(_, height) => { contentHeight.set(height); }}
@@ -174,7 +186,7 @@ export function Screen({ testID, title, titleTestID, onBack, eyebrow, subtitle, 
             {children}
           </Animated.ScrollView>
         ) : children}
-        {footer ? <View style={styles.footer}>{footer}</View> : null}
+        {footer ? <View style={[styles.footer, { paddingBottom: Spacing.lg + bottomInset }]}>{footer}</View> : null}
         {floating}
       </View>
     </View>
@@ -197,11 +209,9 @@ const styles = StyleSheet.create({
   subtitle: { ...Type.callout, color: Brand.forestMuted },
   bandExtra: { marginTop: Spacing.lg, gap: Spacing.md },
   sheet: { flex: 1, backgroundColor: Brand.background, borderTopLeftRadius: Radius.sheet, borderTopRightRadius: Radius.sheet, overflow: 'hidden' },
-  content: { paddingHorizontal: Spacing.gutter, paddingTop: Spacing.xl, paddingBottom: 40, gap: 28 },
+  content: { paddingHorizontal: Spacing.gutter, paddingTop: Spacing.xl, gap: 28 },
   footer: {
-    gap: Spacing.sm, paddingHorizontal: Spacing.gutter, paddingTop: Spacing.md, paddingBottom: Spacing.lg,
+    gap: Spacing.sm, paddingHorizontal: Spacing.gutter, paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Brand.border, backgroundColor: Brand.surface,
   },
-  // Keeps the last row reachable above a floating button.
-  roomForFab: { paddingBottom: 110 },
 });

@@ -1,9 +1,9 @@
-import { DatePickerDialog, Host } from '@expo/ui/jetpack-compose';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { fieldBox } from '@/components/form-field';
 import { Icon } from '@/components/icon';
+import { DateDialog } from '@/components/picker-dialog';
 import { PickerRow } from '@/components/picker-row';
 import { PressableScale } from '@/components/pressable-scale';
 import { Brand, Spacing, Type } from '@/constants/theme';
@@ -26,24 +26,13 @@ interface DateFieldProps {
   testID?: string;
 }
 
-// A field that opens the native Material date picker dialog. Dates are whole days, so they travel
-// as YYYY-MM-DD and the picker's midnight-UTC value is cut to its date part. A dialog (instead of
-// an inline picker) keeps the form from jumping while it scrolls, and only reports on "Usar fecha".
+// A field that opens the native date picker (Material dialog on Android, a sheet on iOS). Dates are
+// whole days, so they travel as YYYY-MM-DD, and the picker only reports on "Usar fecha".
 export function DateField({ label, value, onChange, error, hint, min, max, start, variant = 'field', testID }: DateFieldProps) {
   const [open, setOpen] = useState(false);
   const dialog = open ? (
-    <Host style={styles.dialogHost}>
-      <DatePickerDialog
-        variant="picker"
-        initialDate={`${value || start}T00:00:00.000Z`}
-        selectableDates={{ start: new Date(`${min}T00:00:00Z`), end: new Date(`${max}T00:00:00Z`) }}
-        color={Brand.primary}
-        confirmButtonLabel="Usar fecha"
-        dismissButtonLabel="Cancelar"
-        onDateSelected={(date) => { onChange(date.toISOString().slice(0, 10)); setOpen(false); }}
-        onDismissRequest={() => setOpen(false)}
-      />
-    </Host>
+    <DateDialog label={label} initial={value || start} min={min} max={max}
+      onSelect={(next) => { onChange(next); setOpen(false); }} onDismiss={() => setOpen(false)} />
   ) : null;
 
   if (variant === 'row') {
@@ -83,5 +72,4 @@ const styles = StyleSheet.create({
   inside: { gap: 10, paddingHorizontal: Spacing.lg },
   value: { flex: 1, ...Type.body, color: Brand.text },
   placeholder: { color: Brand.textTertiary },
-  dialogHost: { position: 'absolute', width: 0, height: 0 },
 });

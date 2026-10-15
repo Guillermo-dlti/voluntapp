@@ -164,7 +164,7 @@ Ordered as thin end to end slices (the project's tracer bullet approach in `scop
 ## Follow-up
 
 - [ ] Decide whether BAMX wants printable cards (share the QR as an image or a PDF sheet per activity); out of scope here.
-- [ ] Confirm `@expo/ui` runs in Expo Go SDK 57; if not, the forms need a fallback for the demo or the demo stays on the scan flow.
+- [x] Confirm `@expo/ui` runs in Expo Go SDK 57: its Jetpack Compose dialogs are Android only, so iOS got its own picker sheet (`src/components/picker-dialog.ios.tsx`).
 - [ ] Add the new endpoint to the Hardening role tests (feature 8): supervisor on another activity, no session, rate limit.
 - [ ] Consider making the late threshold a setting if BAMX asks for it.
 - [ ] Record in spec 0005 (via /architect) that attendance now has a second writer and a `method` field.

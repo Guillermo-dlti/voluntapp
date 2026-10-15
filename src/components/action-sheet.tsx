@@ -1,4 +1,5 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef } from 'react';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,6 +19,8 @@ export interface SheetAction {
   detail?: string;
   // Shown but not pressable (such as a file with no rows).
   disabled?: boolean;
+  // Runs without closing the sheet, for a row that only changes what the sheet lists next.
+  keepOpen?: boolean;
   testID?: string;
 }
 
@@ -35,8 +38,26 @@ interface ActionSheetProps {
 export function ActionSheet({ visible, title, subtitle, actions, onClose, testID }: ActionSheetProps) {
   const insets = useSafeAreaInsets();
   const motion = useMotion();
+  // iOS can't present a picker or share sheet while this modal is still closing: the call never
+  // settles. There the action waits for onDismiss; Android runs it right away.
+  const pending = useRef<(() => void) | null>(null);
+
+  function choose(action: SheetAction) {
+    if (action.keepOpen) { action.onPress(); return; }
+    if (Platform.OS === 'ios') pending.current = action.onPress;
+    onClose();
+    if (Platform.OS !== 'ios') action.onPress();
+  }
+
+  function dismissed() {
+    const run = pending.current;
+    pending.current = null;
+    run?.();
+  }
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={dismissed}
+      statusBarTranslucent navigationBarTranslucent>
       <View style={styles.backdrop}>
         <Pressable accessibilityLabel="Cerrar menú" style={StyleSheet.absoluteFill} onPress={onClose} />
         <Animated.View testID={testID} entering={motion.sheetIn()}
@@ -52,7 +73,7 @@ export function ActionSheet({ visible, title, subtitle, actions, onClose, testID
                 {index > 0 ? <View style={styles.hairline} /> : null}
                 <PressableScale testID={action.testID} accessibilityRole="button" android_ripple={{ color: Brand.surfaceMuted }}
                   accessibilityState={{ disabled: !!action.disabled }} disabled={action.disabled}
-                  onPress={() => { onClose(); action.onPress(); }}
+                  onPress={() => { choose(action); }}
                   style={[styles.row, action.disabled && styles.disabled]}>
                   <View style={[styles.iconWell, action.critical && styles.iconWellCritical]}>
                     <Icon name={action.icon} size={18} color={action.critical ? Brand.danger : Brand.primary} />

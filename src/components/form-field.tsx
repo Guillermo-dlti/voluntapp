@@ -1,5 +1,5 @@
-import { forwardRef, useState, type ReactNode } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { forwardRef, useId, useState, type ReactNode } from 'react';
+import { InputAccessoryView, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Brand, Radius, Spacing, Type } from '@/constants/theme';
 
@@ -17,6 +17,9 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
   { label, error, hint, trailing, style, onFocus, onBlur, ...props }, ref,
 ) {
   const [focused, setFocused] = useState(false);
+  // iOS number and phone pads have no return key, so without this bar the keyboard can't be closed.
+  const accessoryId = `keyboard-done-${useId()}`;
+  const doneBar = Platform.OS === 'ios';
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
@@ -24,6 +27,7 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
         <TextInput
           ref={ref}
           {...props}
+          inputAccessoryViewID={doneBar ? accessoryId : undefined}
           accessibilityLabel={label}
           accessibilityHint={error ?? hint}
           placeholderTextColor={Brand.textTertiary}
@@ -36,6 +40,15 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
       </View>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
         : hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      {doneBar ? (
+        <InputAccessoryView nativeID={accessoryId}>
+          <View style={styles.doneBar}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Ocultar teclado" hitSlop={8} onPress={() => Keyboard.dismiss()}>
+              <Text style={styles.done}>Listo</Text>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      ) : null}
     </View>
   );
 });
@@ -79,5 +92,10 @@ const styles = StyleSheet.create({
   groupTitle: { ...Type.calloutStrong, color: Brand.textSecondary, paddingHorizontal: Spacing.xs },
   groupBody: { gap: Spacing.lg },
   ...fieldBox,
+  doneBar: {
+    flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: Spacing.gutter, paddingVertical: Spacing.md,
+    backgroundColor: Brand.surfaceMuted, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Brand.border,
+  },
+  done: { ...Type.bodyStrong, color: Brand.primary },
   input: { flex: 1, fontFamily: Type.body.fontFamily, fontSize: Type.body.fontSize, minHeight: 52, paddingHorizontal: Spacing.lg, color: Brand.text },
 });

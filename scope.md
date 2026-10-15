@@ -264,6 +264,12 @@ Spec: [`docs/specs/0009-qr-check-in/index.md`](docs/specs/0009-qr-check-in/index
   - [x] Regenerate QR and the backfill script (AC-3, AC-4). Backfill ran on Atlas 2026-10-15 (12 volunteers).
   - [x] Demo setup: `server:seed:qr` with `demo-qr.html`, LAN instructions in `server/README.md`, Expo Go version alignment (AC-15)
 - [ ] Verify it: `/check verify` QR check in (API checks against Atlas, then a real phone in Expo Go as coordinator and supervisor)
+- [x] iPhone pass (Expo Go, 2026-10-15): iOS draws the tab bar over the screen, so `Screen` content, its `footer` and the `Fab` add `useTabBarInset()` (`src/hooks/use-tab-bar-inset.ts`; 0 on Android). Report export on iOS is one "Guardar o compartir" action through the share sheet ("Guardar en Archivos"), since Android's folder picker doesn't exist there; `ActionSheet` runs an action after its modal dismisses on iOS, where a share sheet or alert opened mid dismiss never settles
+- [x] Print card: "Imprimir tarjeta" on the volunteer's QR card (admin, coordinator) opens `voluntarios/[id]/tarjeta`, a preview of the ID size card (forest band, BAMX logo, name, QR), then the system print dialog via `expo-print` (`src/services/volunteer-card.ts`). New native module: rebuild the Android dev build (`npm run android`) after pulling
+- [x] Date and time fields on iOS: they used Jetpack Compose dialogs (Android only), so on iPhone they did nothing. The dialogs now live in `src/components/picker-dialog.tsx` (Android, unchanged) and `picker-dialog.ios.tsx` (a bottom sheet around `@react-native-community/datetimepicker`, calendar for dates, wheel for times, same "Usar fecha"/"Usar hora" and "Cancelar")
+- [x] QR arrivals leave the roll call: while attendance is open, people whose record came from a scan (`attendance.method === 'qr'`) show in "Llegaron con QR" (read only rows, tap to adjust), and the roll call, its chips and "Marcar todos presentes" only cover the rest. After finalizing, one full list as before
+- [x] Keyboard: iOS fields get a "Listo" bar (number pads have no return key); scrolling closes the keyboard; on iOS `Screen` scrolls the field clear of it. iOS pickers get fixed heights (iOS doesn't report them, so the sheet was laid out short)
+- [ ] Check on the iPhone: date and time fields in the activity and volunteer forms; Inicio, volunteer detail, activity detail footer and "Nueva actividad" clear the tab bar; report "Guardar o compartir" saves to Archivos; the card prints or saves as PDF. Then the same screens on Android, unchanged
 
 ## v1 code (kept, not deleted)
 

@@ -103,8 +103,7 @@ development build con `npm run android` una vez.
 ## Demostración del escaneo QR en un teléfono (Expo Go)
 
 Para mostrar el registro de asistencia con QR en un teléfono real (Android, o
-iPhone si Expo Go de la App Store ya está en SDK 57; en iPhone los campos de
-fecha y hora no funcionan), sin compilar nada. El teléfono y la laptop deben
+iPhone si Expo Go de la App Store ya está en SDK 57), sin compilar nada. El teléfono y la laptop deben
 estar en la misma red Wi‑Fi.
 
 1. Prepara los datos y abre los códigos:

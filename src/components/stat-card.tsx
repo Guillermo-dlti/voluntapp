@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
+import { RollingNumber } from '@/components/rolling-number';
 import { AppFonts, Brand } from '@/constants/theme';
 
 interface StatCardProps {
@@ -28,7 +29,7 @@ export function StatCard({ label, value, unit, caption, icon, tone = 'default', 
         <Text style={[styles.label, { color: tint }]} numberOfLines={2}>{label}</Text>
       </View>
       <View style={styles.valueRow}>
-        <Text style={styles.value}>{value}</Text>
+        <RollingNumber value={value} style={styles.value} />
         {unit ? <Text style={styles.unit}>{unit}</Text> : null}
       </View>
       {caption ? <Text style={styles.caption}>{caption}</Text> : null}

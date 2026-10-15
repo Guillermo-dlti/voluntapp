@@ -20,7 +20,7 @@ import { useReportExport } from '@/hooks/use-report-export';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import {
-  getSummary, listVolunteerHours,
+  getSummary, listVolunteerHours, savesToFolder,
   type ReportKind, type ReportPage, type ReportSummary, type VolunteerHoursRow,
 } from '@/services/reports';
 import {
@@ -255,19 +255,19 @@ function DownloadCard({ range, volunteers, activities }: { range: ReportRange; v
   const empty = volunteers === 0 && activities === 0;
   const chosen = step && step !== 'file' ? files.find((file) => file.kind === step) : undefined;
 
-  // ActionSheet closes before running an action; picking a file sets the next step in the same
-  // render, so the sheet stays open and only its rows change.
+  // Picking a file keeps the sheet open and only changes its rows; save or share closes it first.
   const actions: SheetAction[] = chosen ? [
-    { label: 'Guardar en el teléfono', icon: { ios: 'arrow.down.circle', android: 'download' }, testID: 'reports-download-save',
-      onPress: () => { void run(chosen.kind, 'download'); } },
-    { label: 'Compartir', icon: { ios: 'square.and.arrow.up', android: 'share' }, testID: 'reports-download-share',
-      onPress: () => { void run(chosen.kind, 'share'); } },
+    ...(savesToFolder ? [{ label: 'Guardar en el teléfono', icon: { ios: 'arrow.down.circle', android: 'download' }, testID: 'reports-download-save',
+      onPress: () => { void run(chosen.kind, 'download'); } } satisfies SheetAction] : []),
+    { label: savesToFolder ? 'Compartir' : 'Guardar o compartir', icon: { ios: 'square.and.arrow.up', android: 'share' }, testID: 'reports-download-share',
+      detail: savesToFolder ? undefined : 'Para guardarlo, elige “Guardar en Archivos”', onPress: () => { void run(chosen.kind, 'share'); } },
   ] : files.map((file) => ({
     label: file.title,
     icon: file.icon,
     testID: file.testID,
     disabled: rows[file.kind] === 0,
     detail: rows[file.kind] === 0 ? 'Sin filas en este periodo' : `${file.detail} · ${plural(rows[file.kind], 'fila', 'filas')}`,
+    keepOpen: true,
     onPress: () => { setStep(file.kind); },
   }));
 

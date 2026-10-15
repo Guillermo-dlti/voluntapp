@@ -1,5 +1,6 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { shareAsync } from 'expo-sharing';
+import { Platform } from 'react-native';
 
 import { ApiError, apiDownload, apiRequest } from '@/services/api';
 import type { ReportRange } from '@/utils/report-range';
@@ -135,6 +136,10 @@ export async function shareReport(kind: ReportKind, range: ReportRange): Promise
     try { if (file.exists) file.delete(); } catch { /* removeOldReports catches it next time. */ }
   }
 }
+
+// Only Android saves straight into a folder staff pick. iOS saves through the share sheet's own
+// "Guardar en Archivos", so there the screens offer a single save or share action.
+export const savesToFolder = Platform.OS === 'android';
 
 // The picker opens in Descargas. Android doesn't let an app use Descargas itself, only a folder
 // inside it (the picker offers "Crear carpeta"), so staff save into one such as "Reportes BAMX".

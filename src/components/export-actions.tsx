@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { Brand, Type } from '@/constants/theme';
 import { useReportExport } from '@/hooks/use-report-export';
-import type { ReportKind } from '@/services/reports';
+import { savesToFolder, type ReportKind } from '@/services/reports';
 import type { ReportRange } from '@/utils/report-range';
 
 interface ExportActionsProps {
@@ -21,13 +21,15 @@ export function ExportActions({ kind, range, total, testID }: ExportActionsProps
   return (
     <View style={styles.container}>
       <View style={styles.row}>
+        {savesToFolder ? (
         <View style={styles.action}>
           <Button testID={testID ? `${testID}-download` : undefined} label="Descargar" busyLabel="Guardando…" variant="secondary"
             icon={{ ios: 'arrow.down.circle', android: 'download' }} busy={busy === 'download'} disabled={empty || busy === 'share'}
             onPress={() => { void run(kind, 'download'); }} />
         </View>
+        ) : null}
         <View style={styles.action}>
-          <Button testID={testID ? `${testID}-share` : undefined} label="Compartir" busyLabel="Preparando…" variant="secondary"
+          <Button testID={testID ? `${testID}-share` : undefined} label={savesToFolder ? 'Compartir' : 'Guardar o compartir'} busyLabel="Preparando…" variant="secondary"
             icon={{ ios: 'square.and.arrow.up', android: 'share' }} busy={busy === 'share'} disabled={empty || busy === 'download'}
             onPress={() => { void run(kind, 'share'); }} />
         </View>

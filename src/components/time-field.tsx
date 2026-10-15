@@ -1,9 +1,9 @@
-import { Host, TimePickerDialog } from '@expo/ui/jetpack-compose';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { fieldBox } from '@/components/form-field';
 import { Icon } from '@/components/icon';
+import { TimeDialog } from '@/components/picker-dialog';
 import { PickerRow } from '@/components/picker-row';
 import { PressableScale } from '@/components/pressable-scale';
 import { Brand, Spacing, Type } from '@/constants/theme';
@@ -23,25 +23,12 @@ interface TimeFieldProps {
   testID?: string;
 }
 
-const pad = (value: number) => String(value).padStart(2, '0');
-
-// The Material time picker dialog, like DateField's. The native picker reads and reports hours in
-// the phone's own zone, so both directions go through a local Date; only the hour and minute matter.
+// The native time picker, like DateField's: Material dialog on Android, a sheet on iOS.
 export function TimeField({ label, value, onChange, error, hint, start, variant = 'field', testID }: TimeFieldProps) {
   const [open, setOpen] = useState(false);
-  const [hour, minute] = (value || start).split(':').map(Number);
   const dialog = open ? (
-    <Host style={styles.dialogHost}>
-      <TimePickerDialog
-        is24Hour={false}
-        initialDate={new Date(2000, 0, 1, hour, minute).toISOString()}
-        color={Brand.primary}
-        confirmButtonLabel="Usar hora"
-        dismissButtonLabel="Cancelar"
-        onDateSelected={(date) => { onChange(`${pad(date.getHours())}:${pad(date.getMinutes())}`); setOpen(false); }}
-        onDismissRequest={() => setOpen(false)}
-      />
-    </Host>
+    <TimeDialog label={label} initial={value || start}
+      onSelect={(next) => { onChange(next); setOpen(false); }} onDismiss={() => setOpen(false)} />
   ) : null;
 
   if (variant === 'row') {
@@ -76,5 +63,4 @@ const styles = StyleSheet.create({
   inside: { gap: 10, paddingHorizontal: Spacing.lg },
   value: { flex: 1, ...Type.body, color: Brand.text },
   placeholder: { color: Brand.textTertiary },
-  dialogHost: { position: 'absolute', width: 0, height: 0 },
 });

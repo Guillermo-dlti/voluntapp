@@ -157,15 +157,16 @@ Showcase data left in Atlas: "Clasificación de alimentos · asistencia" is clos
 
 ## 5a. Activity, attendance and reports UX rework
 
-Spec: [`docs/specs/0007-activity-attendance-reports-ux/index.md`](docs/specs/0007-activity-attendance-reports-ux/index.md) (decisions approved 2026-10-13). Branch: `feature/activity-ux`. Staff found running an activity and downloading reports hard to follow; this reorganizes the screens without changing any business rule. Built before the dashboard, which links into these screens.
+Spec: [`docs/specs/0007-activity-attendance-reports-ux/index.md`](docs/specs/0007-activity-attendance-reports-ux/index.md) (decisions approved 2026-10-13). Branch: `feature/activity-ux`. Code in `src/utils/activity-flow.ts`, `src/app/(tabs)/actividades/`, `src/app/(tabs)/reportes/index.tsx`, `src/providers/auth-provider.tsx`, `server/src/activities.ts`, `server/src/reports.ts`, `src/components/bar-chart.tsx`, `src/hooks/use-report-export.ts`. Staff found running an activity and downloading reports hard to follow; this reorganizes the screens without changing any business rule. Built before the dashboard, which links into these screens.
 
 - [x] Design it (spec)
-- [ ] Build it: `/develop` activity UX rework
-  - [ ] Flow module `src/utils/activity-flow.ts` and shared `SegmentedTabs`, `ActionSheet`, `IconButton`, `Screen` footer (AC-1, AC-2, AC-3, AC-8, AC-13)
-  - [ ] Activity detail: progress strip, next step card, "⋯" menu, tabs; Participantes tab with call and cancel (AC-1 to AC-4, AC-9)
-  - [ ] Asistencia tab as a one tap roll call with the fixed finalize bar (AC-5 to AC-9)
-  - [ ] Activities list hint and "Por finalizar" filter (`when=pending`) (AC-10)
-  - [ ] Reportes download cards and the offline session check fix (AC-11, AC-12)
+- [x] Build it: `/develop` activity UX rework
+  - [x] Flow module `src/utils/activity-flow.ts` and shared `SegmentedTabs`, `ActionSheet`, `IconButton`, `Screen` footer (AC-1, AC-2, AC-3, AC-8, AC-13)
+  - [x] Activity detail: progress strip, next step card, "⋯" menu, tabs; Participantes tab with call and cancel (AC-1 to AC-4, AC-9)
+  - [x] Asistencia tab as a one tap roll call with the fixed finalize bar (AC-5 to AC-9)
+  - [x] Activities list hint and "Por finalizar" filter (`when=pending`) (AC-10)
+  - [x] Offline session check fix (AC-12)
+  - [x] Reportes summary (top 5 by hours, attendance split, summary API counts) and one "Descargar reporte completo (CSV)" card with a file picker sheet, replacing the per report cards (AC-11, AC-11b; spec updated 2026-10-13)
 - [ ] Verify it: `/check verify` on the Android emulator as coordinator, supervisor and admin
 
 ## 5. Dashboard

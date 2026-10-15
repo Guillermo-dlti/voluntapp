@@ -35,7 +35,7 @@ The one path the MVP has to walk end to end:
 | 3 | Activities & assignments | done (spec 0004) |
 | 4 | Attendance & hours | done (spec 0005) |
 | 5a | Activity, attendance and reports UX rework | in-progress (spec 0007) |
-| 5 | Dashboard | not started (after 5a; spec 0008) |
+| 5 | Dashboard | in-progress (spec 0008) |
 | 6 | Reports + CSV export | done (spec 0006) |
 | 7 | Staff management + audit log viewer | not started |
 | 8 | Hardening | not started |
@@ -171,9 +171,16 @@ Spec: [`docs/specs/0007-activity-attendance-reports-ux/index.md`](docs/specs/000
 
 ## 5. Dashboard
 
-- [ ] KPIs (active volunteers, activities this month, hours this month; exact list confirmed when this feature starts)
-- [ ] Upcoming activities
-- [ ] Activities pending attendance finalization
+Spec: [`docs/specs/0008-dashboard/index.md`](docs/specs/0008-dashboard/index.md) (decisions approved 2026-10-14, cross checked). Branch: `feature/dashboard`. Admin and coordinator see three KPIs for the Guadalajara calendar month (horas, voluntarios activos, actividades), the next 3 activities and up to 5 por finalizar (Reportes dropped its stat cards for a totals line; Apple Health style KPI cards and date tiles, AC-12). Supervisors see only activities they supervise, with "Hoy" and "Por finalizar" counts and no KPIs. Code in `server/src/dashboard.ts`, `server/src/activities.ts` (`activityListFilter`, `toActivitySummary`), `server/src/reports.ts` (`currentMonthRange`), `src/app/(tabs)/index.tsx`, `src/services/dashboard.ts`, `src/components/activity-row.tsx`, `src/components/toggle-chip.tsx`.
+
+- [x] Design it (spec)
+- [x] Build it: `/develop` dashboard
+  - [x] Server: `dashboard.view` capability, shared `activityListFilter`/`toActivitySummary` and `currentMonthRange`, `GET /api/dashboard` (AC-2, AC-6, AC-7, AC-11)
+  - [x] Inicio for admin and coordinator: KPI cards, Próximas actividades, Por finalizar (AC-1, AC-2, AC-4, AC-5)
+  - [x] Links with explicit route params into Actividades, Voluntarios and Reportes (AC-3)
+  - [x] Supervisor layout, `mine=true` on the activities list and the "Solo mis actividades" chip (AC-6, AC-8)
+  - [x] Focus reload, pull to refresh, loading, error and stale states (AC-9, AC-10)
+- [ ] Verify it: `/check verify` dashboard on the Android emulator as coordinator, supervisor and admin, plus API checks against Atlas
 
 ## 6. Reports + CSV export
 

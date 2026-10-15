@@ -26,7 +26,7 @@ Staff find the activity screens hard to use: the detail screen is one long scrol
 - **AC-8**: While the user may record, a bar fixed at the bottom of the screen holds "Finalizar asistencia". It is disabled with the line "Registra a todos para finalizar (faltan N)" until everyone is recorded; when enabled it asks for the same confirmation as today. After finalizing, the tab shows every row read only with badge and hours, the line "Asistencia finalizada el <fecha>", and the total hours counted.
 - **AC-9**: Who sees what, unchanged from spec 0005: the roll call buttons and the finalize bar appear only when attendance is not finalized and `roleCan.recordAttendance(role, supervisorId, userId)` is true. Once finalized, an admin can tap a row to open the correction form; everyone else sees rows read only. Supervisors never see the "⋯" menu, Asignar, or cancel. The API checks are untouched.
 - **AC-10**: In the Actividades list, each row adds one "next step" hint line (see *List hint*), and the filter chips become Próximas · Por finalizar · Pasadas · Canceladas · Todas. "Por finalizar" lists activities that started, are open or closed, and have no finalized attendance, oldest first, served by the API (`when=pending`), with its own empty state.
-- **AC-11**: When the period has finalized activities, the main Reportes screen shows, after the stat cards, a "Resumen" section on one `Card` with two charts (see *Reportes summary*):
+- **AC-11**: When the period has finalized activities, the main Reportes screen shows a "Resumen" section (since 2026-10-14 it opens with one line of the period's totals, hours, volunteers and finalized activities, in place of the stat cards, which moved to Inicio in spec 0008) on one `Card` with two charts (see *Reportes summary*):
   - **Más horas**: up to five volunteers with the most hours in the period (only those with more than 0 h), one horizontal bar each, longest first, with the name and the hours in words ("12 h"). Tapping a row opens the volunteer.
   - **Asistencia**: one bar split into Presentes, Tarde and Faltas for every finalized record in the period, with a legend that names each status and gives its count and percent.
 
@@ -111,7 +111,7 @@ Cerrar inscripciones confirmation: title "¿Cerrar inscripciones?", body "Ya no 
 | finalized | "Asistencia finalizada" | neutral |
 | cancelled | none (the badge says it) | |
 
-**Reportes summary** (AC-11, AC-11b). Screen order: stat cards → Resumen → Descargar reporte completo (CSV) card → Ver detalle. With no finalized activity: empty state → download card (the volunteer file still lists active volunteers with 0 h).
+**Reportes summary** (AC-11, AC-11b). Screen order: Resumen (totals line, then charts) → Descargar reporte completo (CSV) card → Ver detalle. With no finalized activity: empty state → download card (the volunteer file still lists active volunteers with 0 h).
 
 | Piece | Rule |
 |---|---|

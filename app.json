@@ -29,9 +29,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#183B24",
+          "image": "./assets/images/bamx-logo.png",
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#183B24",
+            "image": "./assets/images/bamx-logo.png"
+          }
         }
       ],
       "expo-font",

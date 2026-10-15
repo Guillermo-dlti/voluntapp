@@ -6,6 +6,7 @@ import { Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Geist_400Regular, Geist_600SemiBold } from '@expo-google-fonts/geist';
 import { ActivityIndicator, Pressable, Text, View, useColorScheme } from 'react-native';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { FeedbackProvider } from '@/providers/feedback-provider';
 import { Brand } from '@/constants/theme';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -33,7 +34,9 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
       <AuthProvider>
-        <SessionNavigation />
+        <FeedbackProvider>
+          <SessionNavigation />
+        </FeedbackProvider>
       </AuthProvider>
     </ThemeProvider>
   );

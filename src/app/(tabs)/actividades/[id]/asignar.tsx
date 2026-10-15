@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { SkeletonList } from '@/components/skeleton';
 import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { assignVolunteer, getActivity, type ActivityDetail } from '@/services/activities';
 import { listVolunteers, type VolunteerSummary } from '@/services/volunteers';
@@ -21,6 +22,7 @@ import { formatPhone } from '@/utils/volunteer-rules';
 // a refusal (full, busy at that time) stays here with the API's plain sentence.
 export default function AssignVolunteerScreen() {
   const router = useRouter();
+  const feedback = useFeedback();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { refresh } = useAuth();
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
@@ -76,6 +78,7 @@ export default function AssignVolunteerScreen() {
     setMessage('');
     try {
       await assignVolunteer(id, volunteer.id);
+      feedback.toast(`Se asignó a ${volunteer.firstName} ${volunteer.lastName}.`);
       router.back();
     } catch (cause: unknown) {
       if (signOutOn401(cause)) return;

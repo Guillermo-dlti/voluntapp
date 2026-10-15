@@ -13,6 +13,7 @@ import { SkeletonForm } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import {
   correctAttendance, getActivity, recordAttendance,
@@ -30,6 +31,7 @@ const statusOptions = (Object.keys(attendanceStatusLabels) as AttendanceStatus[]
 // Records one person's attendance, or, once the activity is finalized, lets an admin correct it with a reason.
 export default function AttendanceFormScreen() {
   const router = useRouter();
+  const feedback = useFeedback();
   // `status` preselects a choice, as when "Tarde" is tapped in the roll call.
   const { id, assignmentId, status: preset } = useLocalSearchParams<{ id: string; assignmentId: string; status?: string }>();
   const { user, refresh } = useAuth();
@@ -88,6 +90,7 @@ export default function AttendanceFormScreen() {
       const payload = attendancePayload(draft, activity);
       if (correcting) await correctAttendance(activity.id, participant.assignmentId, { ...payload, reason: draft.reason.trim() });
       else await recordAttendance(activity.id, participant.assignmentId, payload);
+      feedback.toast(correcting ? 'Corrección guardada.' : 'Asistencia guardada.');
       router.back();
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }

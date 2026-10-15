@@ -20,6 +20,7 @@ import { SkeletonActivityDetail } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import {
   cancelAssignment, finalizeAttendance, getActivity, markAllPresent, missingPeople, recordAttendance, setActivityStatus,
@@ -45,11 +46,19 @@ const rollFilterOptions = [
 
 type Busy = ActivityStatus | 'mark-all' | 'finalize' | null;
 
+const statusToasts: Record<ActivityStatus, string> = {
+  open: 'Actividad publicada.',
+  closed: 'Inscripciones cerradas.',
+  cancelled: 'Actividad cancelada.',
+  draft: 'La actividad volvió a borrador.',
+};
+
 export default function ActivityDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; tab?: string }>();
   const id = params.id;
   const { user, refresh } = useAuth();
+  const feedback = useFeedback();
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState<Busy>(null);
@@ -90,6 +99,7 @@ export default function ActivityDetailScreen() {
       const activity = await setActivityStatus(detail.activity.id, next);
       setDetail((current) => (current ? { ...current, activity } : current));
       setMessage('');
+      feedback.toast(statusToasts[next]);
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
       setMessage(apiMessage(cause, 'No pudimos cambiar el estado. Inténtalo de nuevo.'));
@@ -106,6 +116,7 @@ export default function ActivityDetailScreen() {
     try {
       await markAllPresent(detail.activity.id);
       await load();
+      feedback.toast('Quedaron todos como presentes.');
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
       setAttendanceMessage(apiMessage(cause, 'No pudimos marcar la asistencia. Inténtalo de nuevo.'));
@@ -121,6 +132,9 @@ export default function ActivityDetailScreen() {
     try {
       await finalizeAttendance(detail.activity.id);
       await load();
+      // The one celebration in the app: this is the moment the hours become official.
+      feedback.celebrate();
+      feedback.toast('Asistencia finalizada. Las horas ya cuentan.');
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
       setAttendanceMessage(apiMessage(cause, 'No pudimos finalizar la asistencia. Inténtalo de nuevo.'));
@@ -173,6 +187,7 @@ export default function ActivityDetailScreen() {
       await cancelAssignment(detail.activity.id, cancelling.assignmentId, reason);
       setCancelling(null);
       await load();
+      feedback.toast('Asignación cancelada.');
       return null;
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { setCancelling(null); void refresh(); return null; }

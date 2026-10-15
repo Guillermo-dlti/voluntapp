@@ -12,6 +12,7 @@ import { SkeletonVolunteerDetail } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { getVolunteer, setVolunteerStatus, type HistoryEntry, type VolunteerDetail } from '@/services/volunteers';
 import { ageFrom, formatDate, formatDateTime } from '@/utils/time';
@@ -36,6 +37,7 @@ function hoursLabel(hours: number): string {
 
 export default function VolunteerDetailScreen() {
   const router = useRouter();
+  const feedback = useFeedback();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, refresh } = useAuth();
   const [detail, setDetail] = useState<VolunteerDetail | null>(null);
@@ -64,6 +66,7 @@ export default function VolunteerDetailScreen() {
       const volunteer = await setVolunteerStatus(detail.volunteer.id, next);
       setDetail((current) => (current ? { ...current, volunteer } : current));
       setMessage('');
+      feedback.toast(next === 'active' ? 'Voluntario reactivado.' : 'Voluntario desactivado. Su historial se conserva.');
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
       setMessage(apiMessage(cause, 'No pudimos cambiar el estado. Inténtalo de nuevo.'));

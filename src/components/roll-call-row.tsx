@@ -4,6 +4,7 @@ import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { StatusBadge, type BadgeTone } from '@/components/status-badge';
+import { useLargeText } from '@/hooks/use-large-text';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import type { AttendanceStatus, Participant } from '@/services/activities';
 import { attendanceStatusLabels, hoursText } from '@/utils/attendance-rules';
@@ -34,11 +35,12 @@ interface RollCallRowProps {
 export function RollCallRow({ entry, recording, busy, locked, error, onChoose, onOpen }: RollCallRowProps) {
   const name = `${entry.firstName} ${entry.lastName}`;
   const record = entry.attendance;
+  const largeText = useLargeText();
   const summary = (
     <>
       <Avatar name={name} />
       <View style={styles.text}>
-        <Text style={styles.name} numberOfLines={1}>{name}</Text>
+        <Text style={styles.name} numberOfLines={largeText ? undefined : 1}>{name}</Text>
         <Text style={styles.detail}>
           {record ? `${hoursText(record.hours)} h${record.correctionReason ? ' · corregido' : ''}` : 'Sin registrar'}
         </Text>
@@ -69,7 +71,7 @@ export function RollCallRow({ entry, recording, busy, locked, error, onChoose, o
                 onPress={() => onChoose(choice.status)}
                 style={[styles.choice, selected && styles[choice.status], (busy || locked) && styles.waiting]}>
                 <Icon name={choice.icon} size={16} color={selected ? Brand.surface : Brand.textSecondary} />
-                <Text style={[styles.choiceLabel, selected && styles.choiceSelected]}>{choice.label}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.choiceLabel, selected && styles.choiceSelected]}>{choice.label}</Text>
               </PressableScale>
             );
           })}

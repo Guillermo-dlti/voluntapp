@@ -10,7 +10,7 @@ import { Screen } from '@/components/screen';
 import { SearchField } from '@/components/search-field';
 import { StatusBadge } from '@/components/status-badge';
 import { SkeletonList } from '@/components/skeleton';
-import { AppFonts, Brand } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
@@ -125,6 +125,6 @@ export default function AssignVolunteerScreen() {
 }
 
 const styles = StyleSheet.create({
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
 });

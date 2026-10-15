@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.border },
   download: { gap: 14 },
   downloadHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  iconWell: { width: 34, height: 34, borderRadius: 10, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  iconWell: { width: 34, height: 34, borderRadius: Radius.well, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
   downloadText: { flex: 1, gap: 2 },
   downloadTitle: { fontFamily: AppFonts.headingSemiBold, fontSize: 17, color: Brand.text },
   downloadPeriod: { fontFamily: AppFonts.bodySemiBold, fontSize: 13, color: Brand.textTertiary, marginTop: 2 },

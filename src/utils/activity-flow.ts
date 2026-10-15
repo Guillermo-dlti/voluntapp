@@ -74,7 +74,8 @@ export function nextStep(detail: ActivityDetail, viewer: Viewer, now = new Date(
   const canEdit = roleCan.editActivities(viewer.role);
   const canAssign = roleCan.assignVolunteers(viewer.role);
   const canRecord = canRecordOn(detail, viewer);
-  const starts = `Empieza el ${formatDateTime(activity.startsAt)}.`;
+  // The time already ends in "a.m."/"p.m.", so no second period.
+  const starts = `Empieza el ${formatDateTime(activity.startsAt).replace(/\.$/, '')}.`;
 
   if (step === 'cancelled') return { text: 'Actividad cancelada. Sus asignaciones se conservan.' };
   if (step === 'finalized') return { text: `Asistencia finalizada. ${hoursText(countedHours(participants))} h contadas.` };

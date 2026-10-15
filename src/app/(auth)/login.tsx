@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   heading: { gap: 6, marginBottom: 6 },
   title: { fontFamily: AppFonts.heading, fontSize: 26, color: Brand.text, letterSpacing: -0.4 },
   subtitle: { fontFamily: AppFonts.body, fontSize: 15, color: Brand.textSecondary, lineHeight: 21 },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
   help: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center', lineHeight: 20, marginTop: 4 },
 });

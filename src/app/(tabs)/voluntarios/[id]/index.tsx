@@ -10,7 +10,8 @@ import { StatCard } from '@/components/stat-card';
 import { StatusBadge, type BadgeTone } from '@/components/status-badge';
 import { SkeletonVolunteerDetail } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
-import { AppFonts, Brand } from '@/constants/theme';
+import { useLargeText } from '@/hooks/use-large-text';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
@@ -40,6 +41,7 @@ export default function VolunteerDetailScreen() {
   const feedback = useFeedback();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, refresh } = useAuth();
+  const largeText = useLargeText();
   const [detail, setDetail] = useState<VolunteerDetail | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -107,7 +109,7 @@ export default function VolunteerDetailScreen() {
   return (
     <Screen testID="volunteer-detail-screen" title={fullName} titleTestID="volunteer-detail-name" onBack={() => router.back()}
       band={<StatusBadge label={active ? 'Activo' : 'Inactivo'} tone={active ? 'success' : 'neutral'} />}>
-      <View style={styles.stats}>
+      <View style={[styles.stats, largeText && styles.stacked]}>
         <StatCard testID="volunteer-total-hours" label="Horas" value={hoursLabel(totalHours)} caption="con asistencia finalizada"
           icon={{ ios: 'clock', android: 'schedule' }} />
         <StatCard label="Actividades" value={String(completedActivities)} caption="completadas"
@@ -171,9 +173,10 @@ export default function VolunteerDetailScreen() {
 const styles = StyleSheet.create({
   block: { gap: 16 },
   stats: { flexDirection: 'row', gap: 12 },
+  stacked: { flexDirection: 'column' },
   notes: { padding: 16 },
   notesText: { fontFamily: AppFonts.body, fontSize: 15, color: Brand.text, lineHeight: 22 },
   actions: { gap: 12 },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
 });

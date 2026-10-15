@@ -9,7 +9,7 @@ import { Row } from '@/components/grouped-list';
 import { Icon } from '@/components/icon';
 import { TimeField } from '@/components/time-field';
 import { SkeletonRow } from '@/components/skeleton';
-import { AppFonts, Brand } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { ApiError, apiMessage } from '@/services/api';
 import { dateConflicts, listSupervisors, type DateConflict } from '@/services/activities';
 import {
@@ -187,6 +187,6 @@ const styles = StyleSheet.create({
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.divider, marginLeft: 16 },
   multiline: { minHeight: 100, paddingTop: 14 },
   fieldError: { fontFamily: AppFonts.body, color: Brand.dangerText, fontSize: 13, marginTop: -16, paddingHorizontal: 4 },
-  alert: { gap: 4, backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  alert: { gap: 4, backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
 });

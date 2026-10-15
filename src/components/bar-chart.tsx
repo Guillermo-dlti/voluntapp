@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/pressable-scale';
+import { useLargeText } from '@/hooks/use-large-text';
 
 import { badgeColors, type BadgeTone } from '@/components/status-badge';
 import { AppFonts, Brand } from '@/constants/theme';
@@ -22,13 +23,15 @@ export interface BarItem {
 // One horizontal bar per item, scaled to the largest value. Items come already sorted.
 export function HorizontalBars({ items, testID }: { items: BarItem[]; testID?: string }) {
   const max = Math.max(...items.map((item) => item.value), 0);
+  // Full names at large text sizes, however many lines they take.
+  const largeText = useLargeText();
   return (
     <View testID={testID} style={styles.bars}>
       {items.map((item) => {
         const content = (
           <>
             <View style={styles.barHead}>
-              <Text style={styles.barLabel} numberOfLines={1}>{item.label}</Text>
+              <Text style={styles.barLabel} numberOfLines={largeText ? undefined : 1}>{item.label}</Text>
               <Text style={styles.barValue}>{item.valueLabel}</Text>
             </View>
             <View style={styles.track}>

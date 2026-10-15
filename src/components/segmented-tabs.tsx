@@ -21,7 +21,7 @@ export function SegmentedTabs<T extends string>({ options, value, onChange, test
           <PressableScale key={option.value} testID={testID ? `${testID}-${option.value}` : undefined}
             accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => onChange(option.value)}
             style={[styles.tab, selected && styles.selected]}>
-            <Text numberOfLines={1} style={[styles.label, selected && styles.selectedLabel]}>{option.label}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.label, selected && styles.selectedLabel]}>{option.label}</Text>
           </PressableScale>
         );
       })}

@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 
 // Native-style grouped list: one rounded container per section with inset hairlines between
 // rows, instead of a separate card per item.
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.border, marginLeft: 16 },
   row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 12 },
   disabled: { opacity: 0.6 },
-  iconWell: { width: 34, height: 34, borderRadius: 10, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  iconWell: { width: 34, height: 34, borderRadius: Radius.well, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, gap: 2 },
   label: { fontFamily: AppFonts.body, fontSize: 16 },
   value: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },

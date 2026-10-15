@@ -3,7 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ActivityStatusBadge } from '@/components/activity-status';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
-import { AppFonts, Brand } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
+import { useLargeText } from '@/hooks/use-large-text';
 import type { ActivitySummary } from '@/services/activities';
 import { activityStep, listHint } from '@/utils/activity-flow';
 import { formatSchedule, mexicoParts } from '@/utils/time';
@@ -31,13 +32,15 @@ function DateTile({ activity, attention }: { activity: ActivitySummary; attentio
 // answers "when, where, how full, what's missing". Used by the Actividades list and Inicio.
 export function ActivityRow({ activity, onPress, testID }: { activity: ActivitySummary; onPress: () => void; testID?: string }) {
   const hint = listHint(activity);
+  // At large text sizes the whole name and place show, however many lines they take.
+  const largeText = useLargeText();
   return (
     <PressableScale testID={testID ?? `activity-row-${activity.id}`} accessibilityRole="button" onPress={onPress} style={styles.row}>
       <DateTile activity={activity} attention={hint?.tone === 'attention'} />
       <View style={styles.rowText}>
-        <Text style={styles.name} numberOfLines={2}>{activity.name}</Text>
+        <Text style={styles.name} numberOfLines={largeText ? undefined : 2}>{activity.name}</Text>
         <Text style={styles.detail}>{formatSchedule(activity.startsAt, activity.endsAt)}</Text>
-        <Text style={styles.detail} numberOfLines={1}>{activity.location}</Text>
+        <Text style={styles.detail} numberOfLines={largeText ? undefined : 1}>{activity.location}</Text>
         <View style={styles.meta}>
           <ActivityStatusBadge status={activity.status} />
           <Text style={styles.count}>{activity.assignedCount}/{activity.capacity} asignados</Text>
@@ -56,7 +59,7 @@ export function ActivityRow({ activity, onPress, testID }: { activity: ActivityS
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  tile: { width: 48, paddingTop: 6, paddingBottom: 7, borderRadius: 12, alignItems: 'center', marginTop: 2, backgroundColor: Brand.surfaceMuted },
+  tile: { minWidth: 48, paddingHorizontal: 6, paddingTop: 6, paddingBottom: 7, borderRadius: Radius.tile, alignItems: 'center', marginTop: 2, backgroundColor: Brand.surfaceMuted },
   tileMonth: { fontFamily: AppFonts.bodySemiBold, fontSize: 12, lineHeight: 15 },
   tileDay: { fontFamily: AppFonts.headingSemiBold, fontSize: 21, lineHeight: 25, color: Brand.text, fontVariant: ['tabular-nums'] },
   tileTextGreen: { color: Brand.primary },

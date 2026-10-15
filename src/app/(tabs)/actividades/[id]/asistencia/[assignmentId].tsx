@@ -11,7 +11,7 @@ import { Screen } from '@/components/screen';
 import { TimeField } from '@/components/time-field';
 import { SkeletonForm } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
-import { AppFonts, Brand } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
@@ -183,6 +183,6 @@ const styles = StyleSheet.create({
   hint: { fontFamily: AppFonts.body, color: Brand.textSecondary, fontSize: 13, paddingHorizontal: 4 },
   fieldError: { fontFamily: AppFonts.body, color: Brand.dangerText, fontSize: 13, paddingHorizontal: 4 },
   multiline: { minHeight: 100, paddingTop: 14 },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
 });

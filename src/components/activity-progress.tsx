@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
-import { AppFonts, Brand } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { flowSteps, type ActivityStep, type NextStep } from '@/utils/activity-flow';
 
 // Borrador → Publicada → Asistencia → Finalizada, with the steps behind checked and the current one ringed.
@@ -25,7 +25,8 @@ export function ProgressStrip({ step }: { step: Exclude<ActivityStep, 'cancelled
               </View>
               <View style={[styles.line, index === flowSteps.length - 1 && styles.hidden, done && styles.lineDone]} />
             </View>
-            <Text style={[styles.label, (done || active) && styles.labelReached, active && styles.labelActive]} numberOfLines={1}>
+            <Text style={[styles.label, (done || active) && styles.labelReached, active && styles.labelActive]} numberOfLines={1}
+              maxFontSizeMultiplier={1.3}>
               {entry.label}
             </Text>
           </View>
@@ -84,12 +85,14 @@ const styles = StyleSheet.create({
   dotDone: { backgroundColor: Brand.primary, borderColor: Brand.primary },
   dotActive: { borderColor: Brand.primary },
   core: { width: 10, height: 10, borderRadius: 5, backgroundColor: Brand.primary },
-  label: { fontFamily: AppFonts.body, fontSize: 12, color: Brand.textTertiary },
+  // Four labels share one row, so they grow only to 1.3× with the system text size; the strip's
+  // accessibility label still reads the full step aloud.
+  label: { alignSelf: 'stretch', textAlign: 'center', fontFamily: AppFonts.body, fontSize: 12, color: Brand.textTertiary },
   labelReached: { color: Brand.textSecondary },
   labelActive: { fontFamily: AppFonts.bodySemiBold, color: Brand.text },
   card: { gap: 14 },
   message: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconWell: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  iconWell: { width: 40, height: 40, borderRadius: Radius.tile, alignItems: 'center', justifyContent: 'center' },
   next: { backgroundColor: Brand.primaryLight },
   done: { backgroundColor: Brand.primaryLight },
   attention: { backgroundColor: Brand.accentLight },

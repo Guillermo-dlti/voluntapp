@@ -457,6 +457,6 @@ const styles = StyleSheet.create({
   summaryValue: { fontFamily: AppFonts.heading, fontSize: 24, color: Brand.text, letterSpacing: -0.4 },
   summaryText: { fontFamily: AppFonts.body, fontSize: 14, lineHeight: 20, color: Brand.textSecondary },
   barHint: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textSecondary, textAlign: 'center' },
-  alert: { gap: 4, backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  alert: { gap: 4, backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
 });

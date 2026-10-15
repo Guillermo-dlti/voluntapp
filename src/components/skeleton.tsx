@@ -5,6 +5,7 @@ import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, wi
 import { Card } from '@/components/card';
 import { Section } from '@/components/grouped-list';
 import { Brand, Motion, Radius } from '@/constants/theme';
+import { useLargeText } from '@/hooks/use-large-text';
 import { useMotion } from '@/utils/motion';
 
 // The light band that sweeps across a placeholder. Built from a few strips of rising and falling
@@ -69,7 +70,7 @@ function Loading({ label, children, style }: { label: string; children: ReactNod
 function ActivityRowShape() {
   return (
     <View style={styles.activityRow}>
-      <Skeleton width={48} height={58} radius={12} />
+      <Skeleton width={48} height={58} radius={Radius.tile} />
       <View style={styles.rowText}>
         <SkeletonLine size={16} width="72%" />
         <SkeletonLine size={14} width="58%" />
@@ -87,7 +88,7 @@ function ActivityRowShape() {
 export function SkeletonRow({ leading }: { leading: 'avatar' | 'icon' }) {
   return (
     <View style={styles.row}>
-      {leading === 'avatar' ? <Skeleton width={40} height={40} radius={20} /> : <Skeleton width={34} height={34} radius={10} />}
+      {leading === 'avatar' ? <Skeleton width={40} height={40} radius={20} /> : <Skeleton width={34} height={34} radius={Radius.well} />}
       <View style={styles.rowText}>
         <SkeletonLine size={16} width="52%" />
         <SkeletonLine size={14} width="34%" />
@@ -131,10 +132,11 @@ function StatShape({ style }: { style?: StyleProp<ViewStyle> }) {
 
 // 'hero': one wide card over a pair (the admin dashboard). 'pair': two side by side.
 export function SkeletonStats({ layout }: { layout: 'hero' | 'pair' }) {
+  const largeText = useLargeText();
   return (
     <View style={styles.stats}>
       {layout === 'hero' ? <StatShape /> : null}
-      <View style={styles.pair}><StatShape style={styles.half} /><StatShape style={styles.half} /></View>
+      <View style={[styles.pair, largeText && styles.stacked]}><StatShape style={styles.half} /><StatShape style={styles.half} /></View>
     </View>
   );
 }
@@ -166,7 +168,7 @@ export function SkeletonActivityDetail() {
       <Card>
         <View style={styles.nextStep}>
           <View style={styles.nextMessage}>
-            <Skeleton width={40} height={40} radius={12} />
+            <Skeleton width={40} height={40} radius={Radius.tile} />
             <View style={styles.rowText}><SkeletonLine size={15} width="90%" /><SkeletonLine size={15} width="60%" /></View>
           </View>
           <Skeleton height={54} radius={Radius.button} />
@@ -246,6 +248,7 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
   stats: { gap: 12 },
   pair: { flexDirection: 'row', gap: 12 },
+  stacked: { flexDirection: 'column' },
   half: { flex: 1 },
   stat: { gap: 4 },
   statTop: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },

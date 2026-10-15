@@ -101,6 +101,10 @@ export const Radius = {
   card: 16,
   button: 14,
   input: 14,
+  // Inline alerts, date tiles and large icon wells.
+  tile: 12,
+  // The small square behind a row's icon.
+  well: 10,
   pill: 999,
 } as const;
 

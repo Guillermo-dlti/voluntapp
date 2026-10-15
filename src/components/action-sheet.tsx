@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   list: { borderRadius: Radius.card, borderWidth: 1, borderColor: Brand.border, overflow: 'hidden' },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.border, marginLeft: 64 },
   row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10 },
-  iconWell: { width: 34, height: 34, borderRadius: 10, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  iconWell: { width: 34, height: 34, borderRadius: Radius.well, backgroundColor: Brand.primaryLight, alignItems: 'center', justifyContent: 'center' },
   iconWellCritical: { backgroundColor: Brand.dangerLight },
   disabled: { opacity: 0.5 },
   text: { flex: 1, gap: 2 },

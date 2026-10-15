@@ -15,7 +15,8 @@ export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   return (
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       style={[styles.circle, { width: size, height: size, borderRadius: size / 2, backgroundColor: tone.background }]}>
-      <Text style={[styles.text, { color: tone.text, fontSize: Math.round(size * 0.38) }]}>{initials(name)}</Text>
+      {/* The circle doesn't grow, so the initials only grow a little with the system text size. */}
+      <Text maxFontSizeMultiplier={1.2} style={[styles.text, { color: tone.text, fontSize: Math.round(size * 0.38) }]}>{initials(name)}</Text>
     </View>
   );
 }

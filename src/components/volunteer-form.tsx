@@ -5,7 +5,7 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { DateField } from '@/components/date-field';
 import { FormField } from '@/components/form-field';
-import { AppFonts, Brand } from '@/constants/theme';
+import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { ApiError } from '@/services/api';
 import { birthDateRange } from '@/utils/time';
 import { validateDraft, type DraftErrors, type DraftField, type VolunteerDraft } from '@/utils/volunteer-rules';
@@ -132,6 +132,6 @@ const styles = StyleSheet.create({
   groupTitle: { fontFamily: AppFonts.bodySemiBold, fontSize: 14, color: Brand.textSecondary, paddingHorizontal: 4 },
   groupBody: { gap: 16 },
   notes: { minHeight: 110, paddingTop: 14 },
-  alert: { backgroundColor: Brand.dangerLight, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  alert: { backgroundColor: Brand.dangerLight, borderRadius: Radius.tile, paddingVertical: 12, paddingHorizontal: 14 },
   alertText: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.dangerText, lineHeight: 20 },
 });

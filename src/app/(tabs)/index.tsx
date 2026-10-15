@@ -12,6 +12,7 @@ import { Screen } from '@/components/screen';
 import { StatCard } from '@/components/stat-card';
 import { SkeletonDashboard } from '@/components/skeleton';
 import { roleLabels } from '@/constants/roles';
+import { useLargeText } from '@/hooks/use-large-text';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
@@ -28,6 +29,7 @@ export default function DashboardScreen() {
   const { user, refresh } = useAuth();
   // Blocks rise in one after another, on the first load only (later reloads keep them mounted).
   const { enter } = useMotion();
+  const largeText = useLargeText();
   const [data, setData] = useState<Dashboard | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [message, setMessage] = useState('');
@@ -92,7 +94,7 @@ export default function DashboardScreen() {
                 <StatCard label="Horas este mes" value={formatHoursNumber(data.kpis.hoursThisMonth)}
                   unit={data.kpis.hoursThisMonth === 1 ? 'hora' : 'horas'} caption="con asistencia finalizada" icon={{ ios: 'clock', android: 'schedule' }} />
               </PressableScale>
-              <View style={styles.pair}>
+              <View style={[styles.pair, largeText && styles.stacked]}>
                 <PressableScale testID="home-kpi-volunteers" accessibilityRole="button" accessibilityLabel="Ver voluntarios activos"
                   style={styles.half} onPress={() => router.navigate({ pathname: '/voluntarios', params: { status: 'active' } })}>
                   <StatCard label="Voluntarios activos" value={integer(data.kpis.activeVolunteers)} caption="en el padrón"
@@ -106,7 +108,7 @@ export default function DashboardScreen() {
               </View>
             </Animated.View>
           ) : (
-            <Animated.View entering={enter(0)} style={styles.pair}>
+            <Animated.View entering={enter(0)} style={[styles.pair, largeText && styles.stacked]}>
               <View testID="home-own-today" style={styles.half} accessible
                 accessibilityLabel={`Hoy tienes ${integer(data.own.today)} ${data.own.today === 1 ? 'actividad' : 'actividades'}`}>
                 <StatCard label="Hoy" value={integer(data.own.today)} caption="actividades tuyas" icon={{ ios: 'sun.max', android: 'today' }} />
@@ -170,5 +172,6 @@ const styles = StyleSheet.create({
   stale: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center', marginBottom: -12 },
   kpis: { gap: 12 },
   pair: { flexDirection: 'row', gap: 12 },
+  stacked: { flexDirection: 'column' },
   half: { flex: 1 },
 });

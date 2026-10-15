@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, type TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AmbientBackground } from '@/components/ambient-background';
 import { Button } from '@/components/button';
 import { FormField } from '@/components/form-field';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
@@ -44,6 +45,7 @@ export default function Login() {
 
   return (
     <View style={styles.root}>
+      <AmbientBackground />
       <SafeAreaView edges={['top']} style={styles.band}>
         <Image source={require('@/assets/images/bamx-logo.png')} style={styles.logo} contentFit="contain"
           accessibilityLabel="Logotipo del Banco de Alimentos de Guadalajara" />

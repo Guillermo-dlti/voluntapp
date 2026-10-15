@@ -137,6 +137,9 @@ export const Motion = {
   toast: 3200,
 } as const;
 
+// Soft glows that drift behind the login header: leaf green, a lighter leaf, a touch of mango.
+export const AmbientGlows = ['rgba(46, 125, 50, 0.55)', 'rgba(111, 191, 115, 0.28)', 'rgba(233, 162, 59, 0.18)'] as const;
+
 // The finalize celebration: BAMX leaf and forest greens, with a little mango from the logo.
 export const CelebrationColors = [Brand.primary, Brand.forest, '#6FBF73', '#A5D6A7', Brand.accent] as const;
 

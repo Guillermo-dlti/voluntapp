@@ -77,7 +77,7 @@ const strOrNull = (value: unknown) => value === null || str(value);
 const num = (value: unknown): value is number => typeof value === 'number';
 const statuses: readonly unknown[] = ['draft', 'open', 'closed', 'cancelled'];
 
-function isSummary(value: unknown): value is ActivitySummary {
+export function isSummary(value: unknown): value is ActivitySummary {
   return isRecord(value) && str(value.id) && str(value.name) && str(value.location) && str(value.startsAt) && str(value.endsAt)
     && num(value.capacity) && num(value.assignedCount) && statuses.includes(value.status) && strOrNull(value.attendanceFinalizedAt);
 }
@@ -107,8 +107,11 @@ function activityFrom(result: unknown): Activity {
 
 const path = (id: string) => `/api/activities/${encodeURIComponent(id)}`;
 
-export async function listActivities(params: { q: string; when: WhenFilter; page: number }) {
-  const query = new URLSearchParams({ when: params.when, page: String(params.page), ...(params.q.trim() ? { q: params.q.trim() } : {}) });
+// `mine` narrows the list to activities the caller supervises; it is left out of the query when off.
+export async function listActivities(params: { q: string; when: WhenFilter; page: number; mine?: boolean }) {
+  const query = new URLSearchParams({
+    when: params.when, page: String(params.page), ...(params.q.trim() ? { q: params.q.trim() } : {}), ...(params.mine ? { mine: 'true' } : {}),
+  });
   const result = await apiRequest(`/api/activities?${query.toString()}`);
   if (!isRecord(result) || !Array.isArray(result.activities) || typeof result.hasMore !== 'boolean') throw malformed();
   const activities = result.activities.filter(isSummary);

@@ -117,6 +117,9 @@ export const Motion = {
   fast: 150,
   easeOut: [0.19, 0.91, 0.38, 1] as const,
   pressedScale: 0.97,
+  // Content arriving on a screen: a short rise and fade, each block a little after the one above.
+  enter: 280,
+  stagger: 60,
 } as const;
 
 // Background/text pairs for initials avatars. Picked per name, so a person keeps their color.

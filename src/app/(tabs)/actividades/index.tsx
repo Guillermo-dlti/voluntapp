@@ -1,25 +1,22 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { ActivityStatusBadge } from '@/components/activity-status';
+import { ActivityRow } from '@/components/activity-row';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { Fab } from '@/components/fab';
 import { FilterChips } from '@/components/filter-chips';
 import { Section } from '@/components/grouped-list';
-import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { SearchField } from '@/components/search-field';
-import { Icon } from '@/components/icon';
+import { ToggleChip } from '@/components/toggle-chip';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { listActivities, type ActivitySummary, type WhenFilter } from '@/services/activities';
-import { listHint } from '@/utils/activity-flow';
-import { formatSchedule } from '@/utils/time';
 
 const whenOptions = [
   { value: 'upcoming', label: 'Próximas' },
@@ -37,12 +34,19 @@ const emptyCopy: Record<WhenFilter, { title: string; body: string }> = {
   all: { title: 'Todavía no hay actividades', body: 'Cuando Coordinación cree la primera actividad, aparecerá aquí.' },
 };
 
+const mineNote = 'Solo ves las actividades que supervisas. Quita el filtro para ver todas.';
+const isWhen = (value: unknown): value is WhenFilter => whenOptions.some((option) => option.value === value);
+
 export default function ActivitiesScreen() {
   const router = useRouter();
   const { user, refresh } = useAuth();
+  const params = useLocalSearchParams<{ when?: string; mine?: string }>();
+  const supervisor = user?.role === 'supervisor';
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [when, setWhen] = useState<WhenFilter>('upcoming');
+  // Supervisors start on their own activities; screen state, so it resets when the app restarts.
+  const [mine, setMine] = useState(supervisor);
   const [items, setItems] = useState<ActivitySummary[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -58,11 +62,21 @@ export default function ActivitiesScreen() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  // A dashboard link sets the filter explicitly, then the params are cleared so a second tap of the
+  // same link applies again and a chip tapped later is never overridden. Unknown values are ignored.
+  useFocusEffect(useCallback(() => {
+    if (params.when === undefined && params.mine === undefined) return;
+    if (isWhen(params.when)) setWhen(params.when);
+    if (supervisor && params.when !== undefined) setMine(params.mine === 'true');
+    setState('loading');
+    router.setParams({ when: undefined, mine: undefined });
+  }, [params.when, params.mine, supervisor, router]));
+
   const load = useCallback(async (target: number) => {
     const request = ++latest.current;
     if (target > 1) setLoadingMore(true);
     try {
-      const result = await listActivities({ q: search, when, page: target });
+      const result = await listActivities({ q: search, when, page: target, mine: supervisor && mine });
       if (request !== latest.current) return;
       setItems((current) => (target === 1 ? result.activities : [...current, ...result.activities]));
       setPage(target);
@@ -77,7 +91,7 @@ export default function ActivitiesScreen() {
     } finally {
       if (request === latest.current) { setLoadingMore(false); setRefreshing(false); }
     }
-  }, [search, when, refresh]);
+  }, [search, when, mine, supervisor, refresh]);
 
   // Reloads when the tab regains focus too, so a change made in the detail shows up.
   useFocusEffect(useCallback(() => { void load(1); }, [load]));
@@ -85,6 +99,10 @@ export default function ActivitiesScreen() {
   if (!user) return null;
   const canEdit = roleCan.editActivities(user.role);
   const searching = search.trim().length >= 2;
+  const filtered = supervisor && mine;
+  const emptyBody = searching ? 'Ninguna actividad coincide con ese nombre. Revisa la ortografía o cambia el filtro.'
+    : when === 'upcoming' && canEdit ? 'Crea una con el botón “Nueva actividad”. Quedará en borrador hasta que la publiques.'
+      : emptyCopy[when].body;
 
   return (
     <Screen
@@ -94,6 +112,10 @@ export default function ActivitiesScreen() {
         <SearchField testID="activities-search" value={query} onChangeText={setQuery} placeholder="Buscar por nombre" />
         <FilterChips testID="activities-when" options={whenOptions} value={when} onDark
           onChange={(next) => { setWhen(next); setState('loading'); }} />
+        {supervisor ? (
+          <ToggleChip testID="activities-mine" label="Solo mis actividades" value={mine}
+            onChange={(next) => { setMine(next); setState('loading'); }} />
+        ) : null}
       </>}
       refreshing={refreshing}
       onRefresh={() => { setRefreshing(true); void load(1); }}
@@ -113,9 +135,7 @@ export default function ActivitiesScreen() {
         <EmptyState testID="activities-empty"
           icon={searching ? { ios: 'magnifyingglass', android: 'search_off' } : { ios: 'calendar', android: 'calendar_month' }}
           title={searching ? 'Sin resultados' : emptyCopy[when].title}
-          body={searching ? 'Ninguna actividad coincide con ese nombre. Revisa la ortografía o cambia el filtro.'
-            : when === 'upcoming' && canEdit ? 'Crea una con el botón “Nueva actividad”. Quedará en borrador hasta que la publiques.'
-              : emptyCopy[when].body} />
+          body={filtered ? `${emptyBody}\n\n${mineNote}` : emptyBody} />
       ) : (
         <Section title={searching ? 'Resultados' : undefined}>
           {items.map((activity) => (
@@ -130,45 +150,8 @@ export default function ActivitiesScreen() {
   );
 }
 
-// Two lines of detail (schedule, place), the fill level, and what the activity needs next, so a row
-// answers "when, where, how full, what's missing".
-function ActivityRow({ activity, onPress }: { activity: ActivitySummary; onPress: () => void }) {
-  const full = activity.assignedCount >= activity.capacity;
-  const hint = listHint(activity);
-  return (
-    <PressableScale testID={`activity-row-${activity.id}`} accessibilityRole="button" onPress={onPress} style={styles.row}>
-      <View style={styles.rowText}>
-        <Text style={styles.name} numberOfLines={2}>{activity.name}</Text>
-        <Text style={styles.detail}>{formatSchedule(activity.startsAt, activity.endsAt)}</Text>
-        <Text style={styles.detail} numberOfLines={1}>{activity.location}</Text>
-        <View style={styles.meta}>
-          <ActivityStatusBadge status={activity.status} />
-          <Text style={[styles.count, full && styles.countFull]}>{activity.assignedCount}/{activity.capacity} asignados</Text>
-        </View>
-        {hint ? (
-          <View style={styles.hint}>
-            {hint.tone === 'attention' ? <Icon name={{ ios: 'exclamationmark.circle', android: 'pending_actions' }} size={16} color={Brand.accentText} /> : null}
-            <Text testID={`activity-hint-${activity.id}`} style={[styles.hintText, hint.tone !== 'neutral' && styles.hintStrong]}>{hint.text}</Text>
-          </View>
-        ) : null}
-      </View>
-      <Icon name={{ ios: 'chevron.right', android: 'chevron_right' }} size={18} color={Brand.textTertiary} />
-    </PressableScale>
-  );
-}
-
 const styles = StyleSheet.create({
   loading: { alignItems: 'center', gap: 12, paddingVertical: 24 },
   muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
   errorBlock: { gap: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
-  rowText: { flex: 1, gap: 4 },
-  name: { fontFamily: AppFonts.bodySemiBold, fontSize: 16, color: Brand.text },
-  detail: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  count: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textSecondary },
-  countFull: { fontFamily: AppFonts.bodySemiBold, color: Brand.accentText },
-  hint: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-  hintText: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textSecondary },
-  hintStrong: { fontFamily: AppFonts.bodySemiBold, color: Brand.accentText },
 });

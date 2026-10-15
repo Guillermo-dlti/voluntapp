@@ -23,6 +23,7 @@ export function Card({ children, padded = true, style, testID }: CardProps) {
 
 const styles = StyleSheet.create({
   shadow: { borderRadius: Radius.card, backgroundColor: Brand.surface, boxShadow: Elevation.card },
-  clip: { borderRadius: Radius.card, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: Brand.border },
+  // flexGrow so the border fills the card when a row stretches it to a taller neighbor's height.
+  clip: { flexGrow: 1, borderRadius: Radius.card, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: Brand.border },
   padded: { padding: 16 },
 });

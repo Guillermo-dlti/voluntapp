@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -14,7 +14,6 @@ import { Row, Section } from '@/components/grouped-list';
 import { Icon } from '@/components/icon';
 import { attendanceTones } from '@/components/roll-call-row';
 import { Screen } from '@/components/screen';
-import { StatCard } from '@/components/stat-card';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useReportExport } from '@/hooks/use-report-export';
 import { useAuth } from '@/providers/auth-provider';
@@ -45,11 +44,13 @@ interface ReportData {
   volunteers: ReportPage<VolunteerHoursRow>;
 }
 
-const number = (value: number) => new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(value);
+const isPreset = (value: unknown): value is Exclude<RangePreset, 'custom'> =>
+  value === 'thisMonth' || value === 'lastMonth' || value === 'thisYear';
 
 export default function ReportsScreen() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const params = useLocalSearchParams<{ preset?: string }>();
   const [preset, setPreset] = useState<RangePreset>('thisMonth');
   const [custom, setCustom] = useState<ReportRange>(() => presetRange('thisMonth'));
   const range = useMemo(() => (preset === 'custom' ? custom : presetRange(preset)), [preset, custom]);
@@ -64,6 +65,14 @@ export default function ReportsScreen() {
   const latest = useRef(0);
   // The range whose numbers are on screen; a different one shows the spinner, a refresh of the same one doesn't.
   const shown = useRef('');
+
+  // A dashboard link sets the period explicitly, then the param is cleared so a second tap applies again
+  // and a chip tapped later is never overridden. Unknown values are ignored.
+  useFocusEffect(useCallback(() => {
+    if (params.preset === undefined) return;
+    if (isPreset(params.preset)) setPreset(params.preset);
+    router.setParams({ preset: undefined });
+  }, [params.preset, router]));
 
   const load = useCallback(async () => {
     const request = ++latest.current;
@@ -151,17 +160,6 @@ export default function ReportsScreen() {
             </>
           ) : (
             <>
-              <View style={styles.stats}>
-                <StatCard testID="reports-hours" label="Horas de voluntariado" value={number(data.summary.totalHours)}
-                  caption="de asistencia finalizada" icon={{ ios: 'clock', android: 'schedule' }} />
-                <View style={styles.statRow}>
-                  <StatCard testID="reports-volunteers" label="Voluntarios" value={number(data.summary.volunteersParticipated)}
-                    caption="participaron" icon={{ ios: 'person.2', android: 'group' }} />
-                  <StatCard testID="reports-activities" label="Actividades" value={number(data.summary.activitiesHeld)}
-                    caption={data.summary.activitiesHeld === 1 ? 'finalizada' : 'finalizadas'} icon={{ ios: 'calendar', android: 'event_available' }} />
-                </View>
-              </View>
-
               <SummarySection summary={data.summary} top={data.volunteers.rows}
                 onOpenVolunteer={(id) => router.push({ pathname: '/voluntarios/[id]', params: { id } })} />
 
@@ -193,6 +191,14 @@ function SummarySection({ summary, top, onOpenVolunteer }: {
     <Section title="Resumen" bare>
       <Card testID="reports-summary">
         <View style={styles.summary}>
+          {/* The period's totals in one quiet line; the big numbers for this month live on Inicio. */}
+          <View style={styles.totalsBlock}>
+            <Text testID="reports-totals" style={styles.totals}>
+              {`${formatHours(summary.totalHours)} · ${plural(summary.volunteersParticipated, 'voluntario', 'voluntarios')} · ${plural(summary.activitiesHeld, 'actividad', 'actividades')}`}
+            </Text>
+            <Text style={styles.totalsNote}>Solo cuenta la asistencia finalizada del periodo.</Text>
+          </View>
+          <View style={styles.hairline} />
           <View style={styles.chart}>
             <Text accessibilityRole="header" style={styles.chartTitle}>Más horas</Text>
             {withHours.length === 0 ? <Text style={styles.chartEmpty}>Nadie sumó horas en este periodo.</Text> : (
@@ -282,6 +288,9 @@ function DownloadCard({ range, volunteers, activities }: { range: ReportRange; v
 
 const styles = StyleSheet.create({
   summary: { gap: 16 },
+  totalsBlock: { gap: 2 },
+  totals: { fontFamily: AppFonts.bodySemiBold, fontSize: 15, lineHeight: 21, color: Brand.text },
+  totalsNote: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textTertiary },
   chart: { gap: 10 },
   chartTitle: { fontFamily: AppFonts.headingSemiBold, fontSize: 17, color: Brand.text },
   chartEmpty: { fontFamily: AppFonts.body, fontSize: 14, lineHeight: 20, color: Brand.textSecondary },
@@ -296,8 +305,6 @@ const styles = StyleSheet.create({
   loading: { alignItems: 'center', gap: 12, paddingVertical: 24 },
   muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
   errorBlock: { gap: 16 },
-  stats: { gap: 12 },
-  statRow: { flexDirection: 'row', gap: 12 },
   pending: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14,
     borderRadius: Radius.card, borderWidth: 1, borderColor: Brand.accent, backgroundColor: Brand.accentLight,

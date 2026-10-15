@@ -13,6 +13,7 @@ export type Capability =
   | 'attendance.finalize'
   | 'attendance.correctFinalized'
   | 'reports.view'
+  | 'dashboard.view'
   | 'audit.view';
 
 // 'own' means allowed only on activities where the staff member is the supervisorId;
@@ -30,6 +31,8 @@ const permissions: Record<Capability, Record<StaffRole, Grant>> = {
   'attendance.finalize': { admin: 'all', coordinator: 'all', supervisor: 'own' },
   'attendance.correctFinalized': { admin: 'all', coordinator: 'none', supervisor: 'none' },
   'reports.view': { admin: 'all', coordinator: 'all', supervisor: 'none' },
+  // 'own' here means a supervisor sees only the activities they supervise and no organization KPIs.
+  'dashboard.view': { admin: 'all', coordinator: 'all', supervisor: 'own' },
   'audit.view': { admin: 'all', coordinator: 'none', supervisor: 'none' },
 };
 

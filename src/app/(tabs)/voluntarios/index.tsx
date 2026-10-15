@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -24,10 +24,12 @@ const statusOptions = [
   { value: 'inactive', label: 'Inactivos' },
   { value: 'all', label: 'Todos' },
 ] as const;
+const isStatus = (value: unknown): value is StatusFilter => statusOptions.some((option) => option.value === value);
 
 export default function VolunteersScreen() {
   const router = useRouter();
   const { user, refresh } = useAuth();
+  const params = useLocalSearchParams<{ status?: string }>();
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('active');
@@ -46,6 +48,14 @@ export default function VolunteersScreen() {
     const timer = setTimeout(() => setSearch(query), 300);
     return () => clearTimeout(timer);
   }, [query]);
+
+  // A dashboard link sets the filter explicitly, then the param is cleared so a second tap applies again
+  // and a chip tapped later is never overridden. Unknown values are ignored.
+  useFocusEffect(useCallback(() => {
+    if (params.status === undefined) return;
+    if (isStatus(params.status)) { setStatus(params.status); setState('loading'); }
+    router.setParams({ status: undefined });
+  }, [params.status, router]));
 
   const load = useCallback(async (target: number) => {
     const request = ++latest.current;

@@ -4,7 +4,7 @@ import type { Document, ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { writeAudit } from './audit.js';
 import type { Activity, V2Collections, Volunteer } from './collections.js';
-import { addDays, isCalendarDate, mexicoDayStart } from './common.js';
+import { addDays, isCalendarDate, mexicoDayStart, mexicoParts } from './common.js';
 import { buildCsv, count, dateTime, hours, text, type CsvCell } from './csv.js';
 import { log } from './logger.js';
 import { currentStaff, requireStaff } from './session.js';
@@ -19,12 +19,20 @@ const listSchema = rangeSchema.extend({
   limit: z.coerce.number().int().min(1).max(PAGE_SIZE).default(PAGE_SIZE),
 });
 
-interface Range {
+export interface Range {
   from: string;
   to: string;
   // Guadalajara midnight of `from`, and of the day after `to` (exclusive).
   start: Date;
   end: Date;
+}
+
+// The calendar month `now` falls in, in Guadalajara: the same range the app's "Este mes" preset sends.
+export function currentMonthRange(now: Date): Range {
+  const { year, month } = mexicoParts(now);
+  const from = `${year}-${month}-01`;
+  const nextFirst = month === '12' ? `${Number(year) + 1}-01-01` : `${year}-${String(Number(month) + 1).padStart(2, '0')}-01`;
+  return { from, to: addDays(nextFirst, -1), start: mexicoDayStart(from), end: mexicoDayStart(nextFirst) };
 }
 
 const badQuery = { message: 'La consulta del reporte no es válida. Elige el periodo de nuevo.' };
@@ -54,7 +62,7 @@ const collator = new Intl.Collator('es-MX', { sensitivity: 'base' });
 
 // An activity belongs to the day its startsAt falls on in Guadalajara, so each one lands in exactly
 // one period. Finalized activities are always closed; `status` is matched so the index serves it.
-const inRange = (range: Range) => ({ status: { $in: ['open', 'closed'] as Activity['status'][] }, startsAt: { $gte: range.start, $lt: range.end } });
+export const inRange = (range: Range) => ({ status: { $in: ['open', 'closed'] as Activity['status'][] }, startsAt: { $gte: range.start, $lt: range.end } });
 const finalizedInRange = (range: Range) => ({ ...inRange(range), attendanceFinalizedAt: { $exists: true } });
 
 interface CountedRecord { activityId: ObjectId; volunteerId: ObjectId; status: 'present' | 'absent' | 'late'; hours: number }
@@ -96,7 +104,7 @@ export interface ActivityAttendanceRow {
 }
 
 // Query functions: the JSON lists page these and the CSVs write all of them, so screen and file can't disagree.
-function reportQueries({ activities, volunteers }: V2Collections) {
+export function reportQueries({ activities, volunteers }: V2Collections) {
   async function summary(range: Range) {
     const candidates = await activities.find(inRange(range), { projection: { startsAt: 1, attendanceFinalizedAt: 1 } }).toArray();
     const now = new Date();
@@ -112,6 +120,7 @@ function reportQueries({ activities, volunteers }: V2Collections) {
       presentCount: totals?.present ?? 0,
       lateCount: totals?.late ?? 0,
       absentCount: totals?.absent ?? 0,
+      activitiesScheduled: candidates.length,
       activitiesHeld: candidates.filter((activity) => activity.attendanceFinalizedAt).length,
       pendingActivities: candidates.filter((activity) => !activity.attendanceFinalizedAt && activity.startsAt < now).length,
     };

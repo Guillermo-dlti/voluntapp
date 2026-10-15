@@ -88,10 +88,10 @@ const styles = StyleSheet.create({
   barHead: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
   barLabel: { flex: 1, fontFamily: AppFonts.body, fontSize: 15, color: Brand.text },
   barValue: { fontFamily: AppFonts.headingSemiBold, fontSize: 15, color: Brand.text },
-  track: { height: 8, borderRadius: 4, backgroundColor: Brand.surfaceMuted, overflow: 'hidden' },
-  fill: { height: 8, minWidth: MIN_BAR, borderRadius: 4, backgroundColor: Brand.primary },
+  track: { height: 6, borderRadius: 3, backgroundColor: Brand.surfaceMuted, overflow: 'hidden' },
+  fill: { height: 6, minWidth: MIN_BAR, borderRadius: 3, backgroundColor: Brand.primary },
   stack: { gap: 12 },
-  stackTrack: { flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden', backgroundColor: Brand.surfaceMuted },
+  stackTrack: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: Brand.surfaceMuted },
   // A thin line of the card color between segments, inside the width so the bar still adds up to 100 %.
   divider: { borderLeftWidth: 2, borderLeftColor: Brand.surface },
   legend: { gap: 6 },

@@ -44,10 +44,14 @@ export function rangeLabel({ from, to }: ReportRange): string {
   return from === to ? formatDate(from) : `${formatDate(from)} al ${formatDate(to)}`;
 }
 
-// Hours with up to 2 decimals, es-MX style.
+// The number alone, up to 2 decimals, es-MX style ("12.5").
+export function formatHoursNumber(value: number): string {
+  return new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(value);
+}
+
+// Hours with up to 2 decimals and the unit, es-MX style.
 export function formatHours(value: number): string {
-  const number = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(value);
-  return `${number} ${value === 1 ? 'hora' : 'horas'}`;
+  return `${formatHoursNumber(value)} ${value === 1 ? 'hora' : 'horas'}`;
 }
 
 // "13 oct 2026" for the Guadalajara day an activity starts on.

@@ -131,6 +131,7 @@ export default function VolunteerDetailScreen() {
 
       <Section title="Código de asistencia" bare>
         <VolunteerQrCard volunteer={volunteer} canRegenerate={canEdit}
+          onPrint={canEdit ? () => router.push({ pathname: '/voluntarios/[id]/tarjeta', params: { id: volunteer.id } }) : undefined}
           onChanged={(next) => setDetail((current) => (current ? { ...current, volunteer: next } : current))} />
       </Section>
 

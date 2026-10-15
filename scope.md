@@ -186,15 +186,17 @@ Spec: [`docs/specs/0008-dashboard/index.md`](docs/specs/0008-dashboard/index.md)
 
 Branch: `feature/ui-polish`. UI only: no API, auth or schema change, no new dependency (Reanimated 4 does all of it; Skia was left out because it costs ~3 MB of CanvasKit on web for one optional background). Keeps the layout, colors and screens; makes the app feel intentional through one set of motion tokens, skeletons, and fit and finish. Verified on the Android emulator and on Expo web.
 
-- [ ] Motion foundation: one duration, curve and spring in `Motion` (`theme.ts`), `src/utils/motion.ts` helpers that fall back to a plain fade under Reduce Motion, `PressableScale` springs back and every tappable row uses it
-- [ ] `Skeleton` with shimmer and shaped placeholders replacing every loading spinner card (Inicio, Voluntarios, Actividades, details, Reportes, forms)
-- [ ] `RollingNumber` digit by digit in `StatCard`
-- [ ] Confetti burst in BAMX greens when attendance is finalized, nowhere else
-- [ ] Toasts that slide in for saved / finalized / status changes (`FeedbackProvider`)
-- [ ] Splash in forest with the BAMX logo, held until fonts load, no Expo overlay (needs a rebuild: `npm run android`)
-- [ ] Large text (font scale 2) pass on every main screen; magic numbers on touched screens moved to tokens
-- [ ] Login ambient background, paused under Reduce Motion and in the background
-- [ ] Verify on the Android emulator (normal and font scale 2, Reduce Motion on and off) and on web
+- [x] Motion foundation: one duration, curve and spring in `Motion` (`theme.ts`), `src/utils/motion.ts` helpers that fall back to a plain fade under Reduce Motion, `PressableScale` springs back and every tappable row uses it
+- [x] `Skeleton` with shimmer and shaped placeholders replacing every loading spinner card (Inicio, Voluntarios, Actividades, details, Reportes, forms)
+- [x] `RollingNumber` digit by digit in `StatCard`
+- [x] Confetti burst in BAMX greens when attendance is finalized, nowhere else
+- [x] Toasts that slide in for saved / finalized / status changes (`FeedbackProvider`)
+- [x] Splash in forest with the BAMX logo, held until fonts load, no Expo overlay (needs a rebuild: `npm run android`)
+- [x] Large text (font scale 2) pass on every main screen; magic numbers on touched screens moved to tokens
+- [x] Login ambient background, paused under Reduce Motion and in the background
+- [x] Verify on the Android emulator: normal and font scale 2, animations removed (Reduce Motion), skeletons and rolling digits (slowed down to capture), toast and confetti (temporarily hooked to pull to refresh; finalizing would have changed Atlas data), splash after a rebuild
+- [ ] Verify on web: blocked. `localhost:8081` answers 500 (`addCustomSourceTransformer` of undefined in static rendering), already the case on `main`; `expo install --check` lists outdated Expo packages (`expo-router` 57.0.17, expected ~57.0.27), the likely cause
+- [ ] Known limit: the NativeTabs bar labels truncate at font scale 2 (native Android tab bar, not styleable from React)
 
 ## 5c. Start attendance manually
 

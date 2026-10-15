@@ -106,7 +106,7 @@ export interface ActivityAttendanceRow {
 // Query functions: the JSON lists page these and the CSVs write all of them, so screen and file can't disagree.
 export function reportQueries({ activities, volunteers }: V2Collections) {
   async function summary(range: Range) {
-    const candidates = await activities.find(inRange(range), { projection: { startsAt: 1, attendanceFinalizedAt: 1 } }).toArray();
+    const candidates = await activities.find(inRange(range), { projection: { startsAt: 1, attendanceStartedAt: 1, attendanceFinalizedAt: 1 } }).toArray();
     const now = new Date();
     const [totals] = await activities.aggregate<{ hours: number; volunteers: number; present: number; late: number; absent: number }>(countedRecords(range, {
       $group: {
@@ -122,7 +122,7 @@ export function reportQueries({ activities, volunteers }: V2Collections) {
       absentCount: totals?.absent ?? 0,
       activitiesScheduled: candidates.length,
       activitiesHeld: candidates.filter((activity) => activity.attendanceFinalizedAt).length,
-      pendingActivities: candidates.filter((activity) => !activity.attendanceFinalizedAt && activity.startsAt < now).length,
+      pendingActivities: candidates.filter((activity) => !activity.attendanceFinalizedAt && (activity.startsAt < now || activity.attendanceStartedAt)).length,
     };
   }
 

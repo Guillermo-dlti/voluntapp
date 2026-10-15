@@ -1,7 +1,7 @@
 import { Router, type Response } from 'express';
 import { ObjectId, type ClientSession, type MongoClient } from 'mongodb';
 import { z } from 'zod';
-import { publicActivity, publicAttendance } from './activities.js';
+import { attendanceOpened, publicActivity, publicAttendance } from './activities.js';
 import { writeAudit } from './audit.js';
 import type { Activity, Attendance, V2Collections } from './collections.js';
 import { answering, conflict, HttpError, inTransaction, jsonBody, noControlChars, parseId } from './common.js';
@@ -100,7 +100,16 @@ function lockRefusal(activity: Activity, now: Date): string {
   if (activity.status === 'draft') return 'La actividad está en borrador. La asistencia se registra cuando está publicada y ya empezó.';
   if (activity.status === 'cancelled') return 'La actividad está cancelada, así que no lleva asistencia.';
   if (activity.attendanceFinalizedAt) return 'La asistencia de esta actividad ya está finalizada. Solo Administración puede corregirla.';
-  if (activity.startsAt > now) return 'La actividad todavía no empieza. La asistencia se registra a partir de la hora de inicio.';
+  if (activity.startsAt > now && !activity.attendanceStartedAt) return 'La actividad todavía no empieza. Usa «Iniciar asistencia» para tomarla antes de la hora de inicio.';
+  return 'La actividad cambió mientras guardabas. Actualízala e inténtalo de nuevo.';
+}
+
+// Why "Iniciar asistencia" matched nothing, as a sentence for staff.
+function startRefusal(activity: Activity, now: Date): string {
+  if (activity.status === 'draft') return 'La actividad está en borrador. Publícala antes de iniciar la asistencia.';
+  if (activity.status === 'cancelled') return 'La actividad está cancelada, así que no lleva asistencia.';
+  if (activity.attendanceFinalizedAt) return 'La asistencia de esta actividad ya está finalizada.';
+  if (activity.attendanceStartedAt || activity.startsAt <= now) return 'La asistencia de esta actividad ya está abierta.';
   return 'La actividad cambió mientras guardabas. Actualízala e inténtalo de nuevo.';
 }
 
@@ -120,7 +129,7 @@ export function attendanceRouter(collections: V2Collections, client: MongoClient
   // assign, or cancel on it collide, so withTransaction retries the loser against the committed state.
   async function stampOpen(activity: Activity, now: Date, session: ClientSession) {
     const stamped = await activities.updateOne(
-      { _id: activity._id, status: { $in: ['open', 'closed'] }, startsAt: { $lte: now }, attendanceFinalizedAt: { $exists: false } },
+      { _id: activity._id, status: { $in: ['open', 'closed'] }, attendanceFinalizedAt: { $exists: false }, ...attendanceOpened(now) },
       { $set: { attendanceLock: new ObjectId() } },
       { session },
     );
@@ -185,6 +194,31 @@ export function attendanceRouter(collections: V2Collections, client: MongoClient
     });
   });
 
+  // Opens attendance before the start time, so staff don't have to wait for the clock (the volunteers
+  // are already there, or the activity started early). Same roles as recording; check in and check out
+  // times must still fall inside the activity's schedule.
+  router.post('/:id/attendance/start', requireStaff(staffUsers, 'attendance.record'), async (request, response) => {
+    const activityId = parseId(request.params.id);
+    if (!activityId) { response.status(404).json(notFound); return; }
+    const staff = currentStaff(response);
+    const now = new Date();
+    await answering(response, async () => {
+      const activity = await transaction(async (session) => {
+        const before = await loadActivity(activityId, staff, 'attendance.record', session);
+        const after = await activities.findOneAndUpdate(
+          { _id: activityId, status: { $in: ['open', 'closed'] }, attendanceFinalizedAt: { $exists: false }, startsAt: { $gt: now }, attendanceStartedAt: { $exists: false } },
+          { $set: { attendanceStartedAt: now, attendanceStartedBy: staff.id, updatedAt: now } },
+          { session, returnDocument: 'after' },
+        );
+        if (!after) throw conflict(startRefusal(before, now));
+        await writeAudit(collections, { actorId: staff.id, action: 'update', collection: 'activities', recordId: activityId, before, after }, session);
+        return after;
+      });
+      log.info('attendance_started', { activityId: activityId.toHexString(), staffId: staff.id.toHexString() });
+      response.json({ activity: publicActivity(activity) });
+    });
+  });
+
   router.post('/:id/attendance/mark-all-present', requireStaff(staffUsers, 'attendance.record'), async (request, response) => {
     const activityId = parseId(request.params.id);
     if (!activityId) { response.status(404).json(notFound); return; }
@@ -224,7 +258,7 @@ export function attendanceRouter(collections: V2Collections, client: MongoClient
         // The same conditional stamp as a recording, plus closing the activity and marking it finalized,
         // all in one update so a second finalize no longer matches.
         const after = await activities.findOneAndUpdate(
-          { _id: activityId, status: { $in: ['open', 'closed'] }, startsAt: { $lte: now }, attendanceFinalizedAt: { $exists: false } },
+          { _id: activityId, status: { $in: ['open', 'closed'] }, attendanceFinalizedAt: { $exists: false }, ...attendanceOpened(now) },
           { $set: { status: 'closed', attendanceFinalizedAt: now, attendanceFinalizedBy: staff.id, attendanceLock: new ObjectId(), updatedAt: now } },
           { session, returnDocument: 'after' },
         );

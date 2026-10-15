@@ -13,6 +13,8 @@ export interface ActivitySummary {
   capacity: number;
   assignedCount: number;
   status: ActivityStatus;
+  // Set when staff opened attendance before the start time.
+  attendanceStartedAt: string | null;
   attendanceFinalizedAt: string | null;
 }
 
@@ -79,7 +81,8 @@ const statuses: readonly unknown[] = ['draft', 'open', 'closed', 'cancelled'];
 
 export function isSummary(value: unknown): value is ActivitySummary {
   return isRecord(value) && str(value.id) && str(value.name) && str(value.location) && str(value.startsAt) && str(value.endsAt)
-    && num(value.capacity) && num(value.assignedCount) && statuses.includes(value.status) && strOrNull(value.attendanceFinalizedAt);
+    && num(value.capacity) && num(value.assignedCount) && statuses.includes(value.status) && strOrNull(value.attendanceStartedAt)
+    && strOrNull(value.attendanceFinalizedAt);
 }
 
 function isActivity(value: unknown): value is Activity {
@@ -180,6 +183,11 @@ export async function markAllPresent(activityId: string): Promise<number> {
   const result = await apiRequest(`${path(activityId)}/attendance/mark-all-present`, { method: 'POST' });
   if (!isRecord(result) || !num(result.created)) throw malformed();
   return result.created;
+}
+
+// Opens attendance before the start time ("Iniciar asistencia").
+export async function startAttendance(activityId: string): Promise<Activity> {
+  return activityFrom(await apiRequest(`${path(activityId)}/attendance/start`, { method: 'POST' }));
 }
 
 export async function finalizeAttendance(activityId: string): Promise<Activity> {

@@ -23,7 +23,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useFeedback } from '@/providers/feedback-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import {
-  cancelAssignment, finalizeAttendance, getActivity, markAllPresent, missingPeople, recordAttendance, setActivityStatus,
+  cancelAssignment, finalizeAttendance, getActivity, markAllPresent, missingPeople, recordAttendance, setActivityStatus, startAttendance,
   type ActivityDetail, type ActivityStatus, type AttendanceStatus, type MissingPerson, type Participant,
 } from '@/services/activities';
 import {
@@ -44,7 +44,7 @@ const rollFilterOptions = [
   { value: 'unrecorded', label: 'Sin registrar' },
 ] as const;
 
-type Busy = ActivityStatus | 'mark-all' | 'finalize' | null;
+type Busy = ActivityStatus | 'start' | 'mark-all' | 'finalize' | null;
 
 const statusToasts: Record<ActivityStatus, string> = {
   open: 'Actividad publicada.',
@@ -52,6 +52,10 @@ const statusToasts: Record<ActivityStatus, string> = {
   cancelled: 'Actividad cancelada.',
   draft: 'La actividad volvió a borrador.',
 };
+
+// A start time inside a sentence: the formatted time already ends in "a.m."/"p.m.", so the sentence's
+// own period would double it.
+const startsText = (iso: string) => formatDateTime(iso).replace(/\.$/, '');
 
 export default function ActivityDetailScreen() {
   const router = useRouter();
@@ -105,6 +109,30 @@ export default function ActivityDetailScreen() {
       setMessage(apiMessage(cause, 'No pudimos cambiar el estado. Inténtalo de nuevo.'));
       void load();
     } finally { pending.current = false; setBusy(null); }
+  }
+
+  async function startEarly() {
+    if (pending.current || !detail) return;
+    pending.current = true;
+    setBusy('start');
+    setMessage('');
+    try {
+      const activity = await startAttendance(detail.activity.id);
+      setDetail((current) => (current ? { ...current, activity } : current));
+      setTab('asistencia');
+      feedback.toast('Asistencia iniciada. Ya puedes marcar quién llegó.');
+    } catch (cause: unknown) {
+      if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
+      setMessage(apiMessage(cause, 'No pudimos iniciar la asistencia. Inténtalo de nuevo.'));
+      void load();
+    } finally { pending.current = false; setBusy(null); }
+  }
+
+  function confirmStart() {
+    if (!detail) return;
+    Alert.alert('¿Iniciar la asistencia ahora?',
+      `La actividad empieza el ${startsText(detail.activity.startsAt)}. Podrás marcar quién llegó desde ya. Las horas de entrada y salida siguen siendo las del horario de la actividad.`,
+      [{ text: 'Volver', style: 'cancel' }, { text: 'Iniciar', onPress: () => void startEarly() }]);
   }
 
   async function markAll() {
@@ -224,6 +252,8 @@ export default function ActivityDetailScreen() {
   // Recording also needs the activity to have started; before that the API refuses it.
   const canRecord = step === 'attendance' && canRecordOn(detail, viewer);
   const canCorrect = finalized && roleCan.correctAttendance(user.role);
+  // Before the start time, the same people can open attendance early ("Iniciar asistencia").
+  const canStart = step === 'published' && canRecordOn(detail, viewer) && assigned.length > 0;
   const showFinalizeBar = currentTab === 'asistencia' && canRecord && assigned.length > 0;
 
   const menuActions: SheetAction[] = [];
@@ -256,6 +286,7 @@ export default function ActivityDetailScreen() {
   function runNext(kind: NextAction) {
     if (kind === 'publish') void changeStatus('open');
     else if (kind === 'assign') router.push({ pathname: '/actividades/[id]/asignar', params: { id: activity.id } });
+    else if (kind === 'start-attendance') confirmStart();
     else if (kind === 'take-attendance') setTab('asistencia');
     else confirmFinalize();
   }
@@ -283,7 +314,8 @@ export default function ActivityDetailScreen() {
       ) : undefined}>
 
       {step === 'cancelled' ? null : <ProgressStrip step={step} />}
-      <NextStepCard step={step} next={next} busy={busy === 'open'} busyLabel="Publicando…"
+      <NextStepCard step={step} next={next} busy={busy === 'open' || busy === 'start'}
+        busyLabel={busy === 'start' ? 'Iniciando…' : 'Publicando…'}
         onAction={() => { if (next.action) runNext(next.action.kind); }} />
 
       {message ? <View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{message}</Text></View> : null}
@@ -383,8 +415,16 @@ export default function ActivityDetailScreen() {
     }
     if (step === 'published') {
       return (
-        <EmptyState icon={{ ios: 'clock', android: 'schedule' }} title="La asistencia se abre al empezar"
-          body={`Podrás marcar quién asistió a partir del ${formatDateTime(activity.startsAt)}.`} />
+        <View style={styles.block}>
+          <EmptyState icon={{ ios: 'clock', android: 'schedule' }} title="La asistencia se abre al empezar"
+            body={canStart
+              ? `Se abre sola el ${startsText(activity.startsAt)}. Si las personas ya llegaron, iníciala ahora.`
+              : `Podrás marcar quién asistió a partir del ${startsText(activity.startsAt)}.`} />
+          {canStart ? (
+            <Button testID="attendance-start" label="Iniciar asistencia" busyLabel="Iniciando…" busy={busy === 'start'}
+              disabled={busy !== null && busy !== 'start'} icon={{ ios: 'play.circle', android: 'play_circle' }} onPress={confirmStart} />
+          ) : null}
+        </View>
       );
     }
     if (assigned.length === 0) {

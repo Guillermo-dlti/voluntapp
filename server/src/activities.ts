@@ -115,6 +115,7 @@ export function publicActivity(activity: Activity) {
     requirements: activity.requirements ?? null,
     status: activity.status,
     supervisorId: activity.supervisorId?.toHexString() ?? null,
+    attendanceStartedAt: activity.attendanceStartedAt?.toISOString() ?? null,
     attendanceFinalizedAt: activity.attendanceFinalizedAt?.toISOString() ?? null,
     createdAt: activity.createdAt.toISOString(),
     updatedAt: activity.updatedAt.toISOString(),
@@ -147,7 +148,7 @@ function publicAssignment(assignment: Assignment) {
 export type WhenFilter = z.infer<typeof listSchema>['when'];
 
 // The fields an activity list row needs; toActivitySummary() reads exactly these.
-export const summaryProjection = { name: 1, location: 1, startsAt: 1, endsAt: 1, capacity: 1, assignedCount: 1, status: 1, attendanceFinalizedAt: 1 } as const;
+export const summaryProjection = { name: 1, location: 1, startsAt: 1, endsAt: 1, capacity: 1, assignedCount: 1, status: 1, attendanceStartedAt: 1, attendanceFinalizedAt: 1 } as const;
 
 export function toActivitySummary(activity: Pick<Activity, '_id' | keyof typeof summaryProjection>) {
   return {
@@ -159,12 +160,17 @@ export function toActivitySummary(activity: Pick<Activity, '_id' | keyof typeof 
     capacity: activity.capacity,
     assignedCount: activity.assignedCount,
     status: activity.status,
+    attendanceStartedAt: activity.attendanceStartedAt?.toISOString() ?? null,
     attendanceFinalizedAt: activity.attendanceFinalizedAt?.toISOString() ?? null,
   };
 }
 
 // "My activities" for a supervisor: ones they supervise that are confirmed (a draft isn't on their plan yet).
 export const ownActivities = (staffId: ObjectId): Filter<Activity> => ({ supervisorId: staffId, status: { $ne: 'draft' } });
+
+// Attendance can be taken once the activity has started, or earlier once staff started it by hand.
+// Recording, finalizing, "Por finalizar" and the reports' pending count all use this, so they agree.
+export const attendanceOpened = (now: Date): Filter<Activity> => ({ $or: [{ startsAt: { $lte: now } }, { attendanceStartedAt: { $exists: true } }] });
 
 // The one rule behind the Actividades list and the dashboard sections, so they can't disagree.
 // `mine` narrows any `when` to the caller's own activities.
@@ -173,9 +179,9 @@ export function activityListFilter(when: WhenFilter, q: string | undefined, mine
   const live: Status[] = ['draft', 'open'];
   let filter: Filter<Activity>;
   if (when === 'upcoming') filter = { status: { $in: live }, endsAt: { $gt: now } };
-  // Exactly what the finalize endpoint accepts and what reports count as pending: started, open or
-  // closed, attendance not finalized. Oldest first, since those hours have waited longest.
-  else if (when === 'pending') filter = { status: { $in: ['open', 'closed'] }, startsAt: { $lte: now }, attendanceFinalizedAt: { $exists: false } };
+  // Exactly what the finalize endpoint accepts and what reports count as pending: started (or started
+  // by hand), open or closed, attendance not finalized. Oldest first, since those hours have waited longest.
+  else if (when === 'pending') filter = { status: { $in: ['open', 'closed'] }, attendanceFinalizedAt: { $exists: false }, ...attendanceOpened(now) };
   else if (when === 'past') filter = { $or: [{ status: 'closed' }, { status: { $in: live }, endsAt: { $lte: now } }] };
   else if (when === 'cancelled') filter = { status: 'cancelled' };
   else filter = {};

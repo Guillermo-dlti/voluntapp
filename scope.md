@@ -200,11 +200,11 @@ Branch: `feature/ui-polish`. UI only: no API, auth or schema change, no new depe
 
 ## 5c. Start attendance manually
 
-Branch: `feature/manual-attendance-start` (after 5b). An "Iniciar asistencia" button lets staff who may record attendance on an activity open it before the start time. The API stores `attendanceStartedAt` on the activity with an audit entry; recording, finalizing and "Por finalizar" accept either the start time passed or `attendanceStartedAt` set. Check in and check out times still have to fall inside the activity's schedule.
+Branch: `feature/ui-polish` (built there at the user's request, after 5b). An "Iniciar asistencia" button lets staff who may record attendance on an activity open it before the start time. `POST /api/activities/:id/attendance/start` (`attendance.record`, own activity for supervisors) stamps `attendanceStartedAt`/`attendanceStartedBy` on an open or closed activity that hasn't started, with its audit entry in the same transaction. Recording, mark all, finalize, "Por finalizar" and the reports' pending count accept either the start time passed or `attendanceStartedAt` set (`attendanceOpened()` in `server/src/activities.ts`). Check in and check out times still have to fall inside the activity's schedule.
 
-- [ ] Design it (spec)
-- [ ] Build it
-- [ ] Verify it on the Android emulator
+- [x] Server: fields and validator, `attendanceOpened()`, start endpoint with refusal messages, summary and detail expose `attendanceStartedAt`
+- [x] App: `activityStep()` treats a started activity as Asistencia; next step card offers "Iniciar asistencia" when assigning isn't the next thing; the Asistencia tab offers it always (with a confirmation), then switches to the roll call with a toast
+- [x] Verify: button and copy on the Android emulator; API refusals checked (401 no session, 404 bad id, 409 already open, 403 another supervisor's activity). Not run: an actual start, which would stamp a shared demo activity in Atlas for good
 
 ## 6. Reports + CSV export
 

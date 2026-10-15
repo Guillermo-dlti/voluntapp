@@ -9,6 +9,9 @@ export interface ReportSummary {
   volunteersParticipated: number;
   activitiesHeld: number;
   pendingActivities: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
 }
 
 export interface VolunteerHoursRow {
@@ -69,12 +72,16 @@ const rangeQuery = (range: ReportRange, extra: Record<string, string> = {}) =>
 export async function getSummary(range: ReportRange): Promise<ReportSummary> {
   const result = await apiRequest(`/api/reports/summary?${rangeQuery(range)}`);
   if (!isRecord(result) || !num(result.totalHours) || !num(result.volunteersParticipated)
-    || !num(result.activitiesHeld) || !num(result.pendingActivities)) throw malformed();
+    || !num(result.activitiesHeld) || !num(result.pendingActivities)
+    || !num(result.presentCount) || !num(result.lateCount) || !num(result.absentCount)) throw malformed();
   return {
     totalHours: result.totalHours,
     volunteersParticipated: result.volunteersParticipated,
     activitiesHeld: result.activitiesHeld,
     pendingActivities: result.pendingActivities,
+    presentCount: result.presentCount,
+    lateCount: result.lateCount,
+    absentCount: result.absentCount,
   };
 }
 

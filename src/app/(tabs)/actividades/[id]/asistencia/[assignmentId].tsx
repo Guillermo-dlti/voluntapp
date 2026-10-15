@@ -29,7 +29,8 @@ const statusOptions = (Object.keys(attendanceStatusLabels) as AttendanceStatus[]
 // Records one person's attendance, or, once the activity is finalized, lets an admin correct it with a reason.
 export default function AttendanceFormScreen() {
   const router = useRouter();
-  const { id, assignmentId } = useLocalSearchParams<{ id: string; assignmentId: string }>();
+  // `status` preselects a choice, as when "Tarde" is tapped in the roll call.
+  const { id, assignmentId, status: preset } = useLocalSearchParams<{ id: string; assignmentId: string; status?: string }>();
   const { user, refresh } = useAuth();
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [participant, setParticipant] = useState<Participant | null>(null);
@@ -47,12 +48,14 @@ export default function AttendanceFormScreen() {
       const entry = found.participants.find((item) => item.assignmentId === assignmentId && item.status === 'assigned') ?? null;
       setDetail(found);
       setParticipant(entry);
-      setDraft(entry ? draftFromRecord(entry.attendance, found.activity) : null);
+      const draft = entry ? draftFromRecord(entry.attendance, found.activity) : null;
+      const chosen = statusOptions.find((option) => option.value === preset)?.value;
+      setDraft(draft && chosen && !found.activity.attendanceFinalizedAt ? { ...draft, status: chosen } : draft);
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) { void refresh(); return; }
       setLoadError(apiMessage(cause));
     }
-  }, [id, assignmentId, refresh]);
+  }, [id, assignmentId, preset, refresh]);
 
   useEffect(() => { void load(); }, [load]);
 

@@ -2,7 +2,7 @@ import { ApiError, apiRequest } from '@/services/api';
 import type { activityPayload } from '@/utils/activity-rules';
 
 export type ActivityStatus = 'draft' | 'open' | 'closed' | 'cancelled';
-export type WhenFilter = 'upcoming' | 'past' | 'cancelled' | 'all';
+export type WhenFilter = 'upcoming' | 'pending' | 'past' | 'cancelled' | 'all';
 
 export interface ActivitySummary {
   id: string;
@@ -13,13 +13,13 @@ export interface ActivitySummary {
   capacity: number;
   assignedCount: number;
   status: ActivityStatus;
+  attendanceFinalizedAt: string | null;
 }
 
 export interface Activity extends ActivitySummary {
   description: string | null;
   requirements: string | null;
   supervisorId: string | null;
-  attendanceFinalizedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -79,12 +79,12 @@ const statuses: readonly unknown[] = ['draft', 'open', 'closed', 'cancelled'];
 
 function isSummary(value: unknown): value is ActivitySummary {
   return isRecord(value) && str(value.id) && str(value.name) && str(value.location) && str(value.startsAt) && str(value.endsAt)
-    && num(value.capacity) && num(value.assignedCount) && statuses.includes(value.status);
+    && num(value.capacity) && num(value.assignedCount) && statuses.includes(value.status) && strOrNull(value.attendanceFinalizedAt);
 }
 
 function isActivity(value: unknown): value is Activity {
   return isSummary(value) && isRecord(value) && strOrNull(value.description) && strOrNull(value.requirements)
-    && strOrNull(value.supervisorId) && strOrNull(value.attendanceFinalizedAt) && str(value.createdAt) && str(value.updatedAt);
+    && strOrNull(value.supervisorId) && str(value.createdAt) && str(value.updatedAt);
 }
 
 const attendanceStatuses: readonly unknown[] = ['present', 'late', 'absent'];
@@ -162,8 +162,11 @@ export interface AttendancePayload {
 const attendancePath = (activityId: string, assignmentId: string) =>
   `${path(activityId)}/attendance/${encodeURIComponent(assignmentId)}`;
 
-export async function recordAttendance(activityId: string, assignmentId: string, payload: AttendancePayload): Promise<void> {
-  await apiRequest(attendancePath(activityId, assignmentId), { method: 'PUT', body: payload });
+// Resolves to the record as the server saved it (with the hours it calculated).
+export async function recordAttendance(activityId: string, assignmentId: string, payload: AttendancePayload): Promise<AttendanceRecord> {
+  const result = await apiRequest(attendancePath(activityId, assignmentId), { method: 'PUT', body: payload });
+  if (!isRecord(result) || !isAttendance(result.attendance)) throw malformed();
+  return result.attendance;
 }
 
 export async function correctAttendance(activityId: string, assignmentId: string, payload: AttendancePayload & { reason: string }): Promise<void> {

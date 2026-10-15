@@ -4,7 +4,8 @@ import { AppFonts, Brand, Radius } from '@/constants/theme';
 
 export type BadgeTone = 'success' | 'neutral' | 'attention' | 'critical';
 
-const tones: Record<BadgeTone, { background: string; dot: string; text: string }> = {
+// Also used by charts, so a status has the same color everywhere.
+export const badgeColors: Record<BadgeTone, { background: string; dot: string; text: string }> = {
   success: { background: Brand.successLight, dot: Brand.success, text: Brand.primaryPressed },
   neutral: { background: Brand.surfaceMuted, dot: Brand.textTertiary, text: Brand.textSecondary },
   attention: { background: Brand.accentLight, dot: Brand.accent, text: Brand.accentText },
@@ -13,7 +14,7 @@ const tones: Record<BadgeTone, { background: string; dot: string; text: string }
 
 // Tinted pill with a dot, so a status reads by color and by word (never color alone).
 export function StatusBadge({ label, tone }: { label: string; tone: BadgeTone }) {
-  const colors = tones[tone];
+  const colors = badgeColors[tone];
   return (
     <View style={[styles.badge, { backgroundColor: colors.background }]}>
       <View style={[styles.dot, { backgroundColor: colors.dot }]} />

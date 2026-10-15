@@ -18,10 +18,12 @@ import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { listActivities, type ActivitySummary, type WhenFilter } from '@/services/activities';
+import { listHint } from '@/utils/activity-flow';
 import { formatSchedule } from '@/utils/time';
 
 const whenOptions = [
   { value: 'upcoming', label: 'Próximas' },
+  { value: 'pending', label: 'Por finalizar' },
   { value: 'past', label: 'Pasadas' },
   { value: 'cancelled', label: 'Canceladas' },
   { value: 'all', label: 'Todas' },
@@ -29,6 +31,7 @@ const whenOptions = [
 
 const emptyCopy: Record<WhenFilter, { title: string; body: string }> = {
   upcoming: { title: 'No hay actividades próximas', body: 'Las actividades en borrador o publicadas que aún no terminan aparecen aquí, la más cercana primero.' },
+  pending: { title: 'Nada por finalizar', body: 'Las actividades que ya empezaron y aún no tienen la asistencia finalizada aparecen aquí, la más antigua primero. Sus horas no cuentan hasta finalizarla.' },
   past: { title: 'Sin actividades pasadas', body: 'Cuando una actividad termine o se cierre, aparecerá aquí con sus participantes.' },
   cancelled: { title: 'No hay actividades canceladas', body: 'Si cancelas una actividad, se conserva aquí con sus asignaciones.' },
   all: { title: 'Todavía no hay actividades', body: 'Cuando Coordinación cree la primera actividad, aparecerá aquí.' },
@@ -127,9 +130,11 @@ export default function ActivitiesScreen() {
   );
 }
 
-// Two lines of detail (schedule, place) plus the fill level, so a row answers "when, where, how full".
+// Two lines of detail (schedule, place), the fill level, and what the activity needs next, so a row
+// answers "when, where, how full, what's missing".
 function ActivityRow({ activity, onPress }: { activity: ActivitySummary; onPress: () => void }) {
   const full = activity.assignedCount >= activity.capacity;
+  const hint = listHint(activity);
   return (
     <PressableScale testID={`activity-row-${activity.id}`} accessibilityRole="button" onPress={onPress} style={styles.row}>
       <View style={styles.rowText}>
@@ -140,6 +145,12 @@ function ActivityRow({ activity, onPress }: { activity: ActivitySummary; onPress
           <ActivityStatusBadge status={activity.status} />
           <Text style={[styles.count, full && styles.countFull]}>{activity.assignedCount}/{activity.capacity} asignados</Text>
         </View>
+        {hint ? (
+          <View style={styles.hint}>
+            {hint.tone === 'attention' ? <Icon name={{ ios: 'exclamationmark.circle', android: 'pending_actions' }} size={16} color={Brand.accentText} /> : null}
+            <Text testID={`activity-hint-${activity.id}`} style={[styles.hintText, hint.tone !== 'neutral' && styles.hintStrong]}>{hint.text}</Text>
+          </View>
+        ) : null}
       </View>
       <Icon name={{ ios: 'chevron.right', android: 'chevron_right' }} size={18} color={Brand.textTertiary} />
     </PressableScale>
@@ -157,4 +168,7 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
   count: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textSecondary },
   countFull: { fontFamily: AppFonts.bodySemiBold, color: Brand.accentText },
+  hint: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  hintText: { fontFamily: AppFonts.body, fontSize: 13, color: Brand.textSecondary },
+  hintStrong: { fontFamily: AppFonts.bodySemiBold, color: Brand.accentText },
 });

@@ -34,7 +34,8 @@ The one path the MVP has to walk end to end:
 | 2 | Volunteers | done (spec 0003) |
 | 3 | Activities & assignments | done (spec 0004) |
 | 4 | Attendance & hours | done (spec 0005) |
-| 5 | Dashboard | not started |
+| 5a | Activity, attendance and reports UX rework | in-progress (spec 0007) |
+| 5 | Dashboard | not started (after 5a; spec 0008) |
 | 6 | Reports + CSV export | done (spec 0006) |
 | 7 | Staff management + audit log viewer | not started |
 | 8 | Hardening | not started |
@@ -154,6 +155,20 @@ Follow-up decision for `/architect`: changing an open activity's schedule after 
 
 Showcase data left in Atlas: "Clasificación de alimentos · asistencia" is closed with finalized present, late and absent rows plus an admin correction. "Preparación de despensas · asistencia" is open with three unrecorded people for the recording demo; its supervisor is Daniela Ruiz. "Registro de donaciones · coordinación" is open with one unrecorded person and no supervisor for the read-only supervisor view. All three ran 25 September, 6:00–9:00 p.m.; after that window they appear under Pasadas.
 
+## 5a. Activity, attendance and reports UX rework
+
+Spec: [`docs/specs/0007-activity-attendance-reports-ux/index.md`](docs/specs/0007-activity-attendance-reports-ux/index.md) (decisions approved 2026-10-13). Branch: `feature/activity-ux`. Code in `src/utils/activity-flow.ts`, `src/app/(tabs)/actividades/`, `src/app/(tabs)/reportes/index.tsx`, `src/providers/auth-provider.tsx`, `server/src/activities.ts`, `server/src/reports.ts`, `src/components/bar-chart.tsx`, `src/hooks/use-report-export.ts`. Staff found running an activity and downloading reports hard to follow; this reorganizes the screens without changing any business rule. Built before the dashboard, which links into these screens.
+
+- [x] Design it (spec)
+- [x] Build it: `/develop` activity UX rework
+  - [x] Flow module `src/utils/activity-flow.ts` and shared `SegmentedTabs`, `ActionSheet`, `IconButton`, `Screen` footer (AC-1, AC-2, AC-3, AC-8, AC-13)
+  - [x] Activity detail: progress strip, next step card, "⋯" menu, tabs; Participantes tab with call and cancel (AC-1 to AC-4, AC-9)
+  - [x] Asistencia tab as a one tap roll call with the fixed finalize bar (AC-5 to AC-9)
+  - [x] Activities list hint and "Por finalizar" filter (`when=pending`) (AC-10)
+  - [x] Offline session check fix (AC-12)
+  - [x] Reportes summary (top 5 by hours, attendance split, summary API counts) and one "Descargar reporte completo (CSV)" card with a file picker sheet, replacing the per report cards (AC-11, AC-11b; spec updated 2026-10-13)
+- [ ] Verify it: `/check verify` on the Android emulator as coordinator, supervisor and admin
+
 ## 5. Dashboard
 
 - [ ] KPIs (active volunteers, activities this month, hours this month; exact list confirmed when this feature starts)
@@ -170,7 +185,7 @@ Spec: [`docs/specs/0006-reports-csv-export/index.md`](docs/specs/0006-reports-cs
   - [x] Hours per volunteer: list endpoint, preview and full list screen (AC-4, AC-11)
   - [x] CSV export: writer with injection guard, audit before send, per staff rate limit, download and share on Android (AC-6, AC-7, AC-8, AC-9, AC-12)
   - [x] Attendance per activity: list, CSV, preview and full list screen (AC-5, AC-6, AC-11, AC-12)
-- [x] Verify it: `/check verify` 2026-10-13, 22 of 33 steps passed against Atlas and the emulator (see `verify.md`). Marked done with one known issue: "Descargar" offline returns to the full screen "No hay conexión" because the foreground session refresh fails (`src/providers/auth-provider.tsx`), so the message under the button never shows. Not run (need writes to Atlas or hands on work): range edges, pending count, inactive volunteer with hours, paging past 50, the 429 limit, the server log line, Excel, Drive/Gmail delivery, sign out on a server side 401
+- [x] Verify it: `/check verify` 2026-10-13, 22 of 33 steps passed against Atlas and the emulator (see `verify.md`). Marked done with one known issue (fix planned in 5a, AC-12): "Descargar" offline returns to the full screen "No hay conexión" because the foreground session refresh fails (`src/providers/auth-provider.tsx`), so the message under the button never shows. Not run (need writes to Atlas or hands on work): range edges, pending count, inactive volunteer with hours, paging past 50, the 429 limit, the server log line, Excel, Drive/Gmail delivery, sign out on a server side 401
 
 ## 7. Staff management + audit log viewer
 

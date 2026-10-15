@@ -1,16 +1,16 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { ActivityRow } from '@/components/activity-row';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { Row, Section } from '@/components/grouped-list';
 import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { StatCard } from '@/components/stat-card';
+import { SkeletonDashboard } from '@/components/skeleton';
 import { roleLabels } from '@/constants/roles';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -73,7 +73,7 @@ export default function DashboardScreen() {
       refreshing={refreshing}
       onRefresh={() => { setRefreshing(true); void load(); }}>
       {state === 'loading' ? (
-        <Card><View style={styles.loading}><ActivityIndicator color={Brand.primary} /><Text style={styles.muted}>Cargando el inicio…</Text></View></Card>
+        <SkeletonDashboard layout={user.role === 'supervisor' ? 'pair' : 'hero'} />
       ) : state === 'error' || !data ? (
         <View style={styles.errorBlock}>
           <EmptyState icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar el inicio" body={message} />
@@ -165,8 +165,6 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   roleChip: { alignSelf: 'flex-start', backgroundColor: Brand.accent, borderRadius: Radius.pill, paddingHorizontal: 12, paddingVertical: 5 },
   roleText: { fontFamily: AppFonts.bodySemiBold, fontSize: 13, color: Brand.forest },
-  loading: { alignItems: 'center', gap: 12, paddingVertical: 24 },
-  muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
   errorBlock: { gap: 16 },
   // Pulled toward the KPIs below, since the screen's content gap is wide.
   stale: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center', marginBottom: -12 },

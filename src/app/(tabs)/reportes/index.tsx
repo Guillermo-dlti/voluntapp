@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/action-sheet';
 import { HorizontalBars, StackedBar } from '@/components/bar-chart';
@@ -14,6 +14,7 @@ import { Row, Section } from '@/components/grouped-list';
 import { Icon } from '@/components/icon';
 import { attendanceTones } from '@/components/roll-call-row';
 import { Screen } from '@/components/screen';
+import { SkeletonReport } from '@/components/skeleton';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useReportExport } from '@/hooks/use-report-export';
 import { useAuth } from '@/providers/auth-provider';
@@ -137,7 +138,7 @@ export default function ReportsScreen() {
           <Button label="Reintentar" variant="secondary" onPress={() => { setState('loading'); void load(); }} />
         </View>
       ) : state === 'loading' || !data ? (
-        <Card><View style={styles.loading}><ActivityIndicator color={Brand.primary} /><Text style={styles.muted}>Calculando el reporte…</Text></View></Card>
+        <SkeletonReport />
       ) : (
         <>
           {data.summary.pendingActivities > 0 ? (
@@ -302,8 +303,6 @@ const styles = StyleSheet.create({
   downloadTitle: { fontFamily: AppFonts.headingSemiBold, fontSize: 17, color: Brand.text },
   downloadPeriod: { fontFamily: AppFonts.bodySemiBold, fontSize: 13, color: Brand.textTertiary, marginTop: 2 },
   fields: { gap: 16 },
-  loading: { alignItems: 'center', gap: 12, paddingVertical: 24 },
-  muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
   errorBlock: { gap: 16 },
   pending: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14,

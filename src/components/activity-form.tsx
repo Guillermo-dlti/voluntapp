@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, type TextInput } from 'react-native';
+import { StyleSheet, Text, View, type TextInput } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -8,6 +8,7 @@ import { FormField } from '@/components/form-field';
 import { Row } from '@/components/grouped-list';
 import { Icon } from '@/components/icon';
 import { TimeField } from '@/components/time-field';
+import { SkeletonRow } from '@/components/skeleton';
 import { AppFonts, Brand } from '@/constants/theme';
 import { ApiError, apiMessage } from '@/services/api';
 import { dateConflicts, listSupervisors, type DateConflict } from '@/services/activities';
@@ -120,7 +121,7 @@ export function ActivityForm({ initial, submitLabel, busyLabel, onSubmit, onSess
 
       <FormGroup title="Supervisión" padded={false}>
         {supervisors === null && !supervisorsError ? (
-          <View style={styles.loading}><ActivityIndicator color={Brand.primary} /></View>
+          <View accessible accessibilityLabel="Cargando supervisores…"><SkeletonRow leading="icon" /><SkeletonRow leading="icon" /></View>
         ) : supervisorsError ? (
           <Text style={[styles.hint, styles.padded]}>{supervisorsError}</Text>
         ) : (
@@ -183,7 +184,6 @@ const styles = StyleSheet.create({
   groupBody: { gap: 16 },
   hint: { fontFamily: AppFonts.body, color: Brand.textSecondary, fontSize: 13 },
   padded: { padding: 16 },
-  loading: { padding: 16, alignItems: 'center' },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: Brand.divider, marginLeft: 16 },
   multiline: { minHeight: 100, paddingTop: 14 },
   fieldError: { fontFamily: AppFonts.body, color: Brand.dangerText, fontSize: 13, marginTop: -16, paddingHorizontal: 4 },

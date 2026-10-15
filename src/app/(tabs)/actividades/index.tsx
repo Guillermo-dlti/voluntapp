@@ -4,7 +4,6 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ActivityRow } from '@/components/activity-row';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { Fab } from '@/components/fab';
 import { FilterChips } from '@/components/filter-chips';
@@ -12,6 +11,7 @@ import { Section } from '@/components/grouped-list';
 import { Screen } from '@/components/screen';
 import { SearchField } from '@/components/search-field';
 import { ToggleChip } from '@/components/toggle-chip';
+import { SkeletonList } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -125,7 +125,7 @@ export default function ActivitiesScreen() {
           onPress={() => router.push('/actividades/nueva')} />
       ) : undefined}>
       {state === 'loading' ? (
-        <Card><View style={styles.loading}><ActivityIndicator color={Brand.primary} /><Text style={styles.muted}>Cargando actividades…</Text></View></Card>
+        <SkeletonList variant="activity" rows={4} label="Cargando actividades…" />
       ) : state === 'error' ? (
         <View style={styles.errorBlock}>
           <EmptyState icon={{ ios: 'wifi.exclamationmark', android: 'cloud_off' }} title="No pudimos cargar la lista" body={message} />
@@ -151,7 +151,6 @@ export default function ActivitiesScreen() {
 }
 
 const styles = StyleSheet.create({
-  loading: { alignItems: 'center', gap: 12, paddingVertical: 24 },
   muted: { fontFamily: AppFonts.body, fontSize: 14, color: Brand.textSecondary, textAlign: 'center' },
   errorBlock: { gap: 16 },
 });

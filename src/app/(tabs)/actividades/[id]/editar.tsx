@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ActivityForm } from '@/components/activity-form';
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
-import { Brand } from '@/constants/theme';
+import { SkeletonForm } from '@/components/skeleton';
+
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { getActivity, updateActivity, type Activity } from '@/services/activities';
@@ -46,7 +47,7 @@ export default function EditActivityScreen() {
           <EmptyState icon={{ ios: 'exclamationmark.triangle', android: 'error' }} title="No pudimos abrir la actividad" body={message} />
           <Button label="Reintentar" variant="secondary" onPress={() => void load()} />
         </View>
-      ) : <ActivityIndicator color={Brand.primary} />}
+      ) : <SkeletonForm />}
     </Screen>
   );
 }

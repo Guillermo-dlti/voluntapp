@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -9,6 +9,7 @@ import { FilterChips } from '@/components/filter-chips';
 import { FormField } from '@/components/form-field';
 import { Screen } from '@/components/screen';
 import { TimeField } from '@/components/time-field';
+import { SkeletonForm } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -111,7 +112,7 @@ export default function AttendanceFormScreen() {
       </View>
     );
   } else if (!detail || !activity) {
-    body = <ActivityIndicator color={Brand.primary} />;
+    body = <SkeletonForm fields={4} />;
   } else if (!participant || !draft) {
     body = <EmptyState icon={{ ios: 'person.crop.circle.badge.xmark', android: 'person_off' }} title="Esta persona ya no está asignada"
       body="Solo se registra la asistencia de personas asignadas. Regresa a la actividad para ver la lista actual." />;

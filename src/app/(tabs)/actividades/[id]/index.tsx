@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/action-sheet';
 import { ActivityStatusBadge } from '@/components/activity-status';
@@ -16,6 +16,7 @@ import { RollCallRow } from '@/components/roll-call-row';
 import { Screen } from '@/components/screen';
 import { SegmentedTabs } from '@/components/segmented-tabs';
 import { StatCard } from '@/components/stat-card';
+import { SkeletonActivityDetail } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand, Radius } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -189,7 +190,7 @@ export default function ActivityDetailScreen() {
             <EmptyState icon={{ ios: 'exclamationmark.triangle', android: 'error' }} title="No pudimos abrir la actividad" body={message} />
             <Button label="Reintentar" variant="secondary" onPress={() => void load()} />
           </View>
-        ) : <ActivityIndicator color={Brand.primary} />}
+        ) : <SkeletonActivityDetail />}
       </Screen>
     );
   }

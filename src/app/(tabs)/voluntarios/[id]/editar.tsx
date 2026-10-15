@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
 import { VolunteerForm } from '@/components/volunteer-form';
-import { Brand } from '@/constants/theme';
+import { SkeletonForm } from '@/components/skeleton';
+
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError, apiMessage } from '@/services/api';
 import { getVolunteer, updateVolunteer, type Volunteer } from '@/services/volunteers';
@@ -55,7 +56,7 @@ export default function EditVolunteerScreen() {
           <EmptyState icon={{ ios: 'exclamationmark.triangle', android: 'error' }} title="No pudimos abrir el registro" body={message} />
           <Button label="Reintentar" variant="secondary" onPress={() => void load()} />
         </View>
-      ) : <ActivityIndicator color={Brand.primary} />}
+      ) : <SkeletonForm />}
     </Screen>
   );
 }

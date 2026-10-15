@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
@@ -8,6 +8,7 @@ import { Row, Section } from '@/components/grouped-list';
 import { Screen } from '@/components/screen';
 import { StatCard } from '@/components/stat-card';
 import { StatusBadge, type BadgeTone } from '@/components/status-badge';
+import { SkeletonVolunteerDetail } from '@/components/skeleton';
 import { roleCan } from '@/constants/roles';
 import { AppFonts, Brand } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -91,7 +92,7 @@ export default function VolunteerDetailScreen() {
             <EmptyState icon={{ ios: 'exclamationmark.triangle', android: 'error' }} title="No pudimos abrir el registro" body={message} />
             <Button label="Reintentar" variant="secondary" onPress={() => void load()} />
           </View>
-        ) : <ActivityIndicator color={Brand.primary} />}
+        ) : <SkeletonVolunteerDetail />}
       </Screen>
     );
   }
